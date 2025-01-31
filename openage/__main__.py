@@ -1,5 +1,6 @@
-# Copyright 2015-2021 the openage authors. See copying.md for legal info.
-
+# Copyright 2015-2024 the openage authors. See copying.md for legal info.
+#
+# pylint: disable=too-many-statements
 """
 Behold: The central entry point for all of openage.
 
@@ -30,25 +31,15 @@ def print_version():
     sys.exit(0)
 
 
-def add_dll_search_paths(dll_paths):
+def add_dll_search_paths(dll_paths: list[str]):
     """
     This function adds DLL search paths.
-    This function does nothing if current OS is not Windows.
     """
+    from .util.dll import DllDirectoryManager
 
-    def close_windows_dll_path_handles(dll_path_handles):
-        """
-        This function calls close() method on each of the handles.
-        """
-        for handle in dll_path_handles:
-            handle.close()
+    manager = DllDirectoryManager(dll_paths)
 
-    if sys.platform == 'win32' and dll_paths is not None:
-        import atexit
-        win_dll_path_handles = []
-        for addtional_path in dll_paths:
-            win_dll_path_handles.append(os.add_dll_directory(addtional_path))
-        atexit.register(close_windows_dll_path_handles, win_dll_path_handles)
+    return manager
 
 
 def main(argv=None):
@@ -59,8 +50,11 @@ def main(argv=None):
     )
 
     if sys.platform == 'win32':
+        from .util.dll import default_paths
         cli.add_argument(
             "--add-dll-search-path", action='append', dest='dll_paths',
+            # use path of current openage executable as default
+            default=default_paths(),
             help="(Windows only) provide additional DLL search path")
 
     cli.add_argument("--version", "-V", action='store_true', dest='print_version',
@@ -98,15 +92,15 @@ def main(argv=None):
     # pylint: disable=reimported
 
     from .main.main import init_subparser
-    init_subparser(subparsers.add_parser(
+    main_cli = subparsers.add_parser(
         "main",
-        parents=[global_cli, cfg_cli]))
+        parents=[global_cli, cfg_cli])
+    init_subparser(main_cli)
 
     from .game.main import init_subparser
-    game_cli = subparsers.add_parser(
+    init_subparser(subparsers.add_parser(
         "game",
-        parents=[global_cli, cfg_cli])
-    init_subparser(game_cli)
+        parents=[global_cli, cfg_cli]))
 
     from .testing.main import init_subparser
     init_subparser(subparsers.add_parser(
@@ -123,22 +117,31 @@ def main(argv=None):
         "convert-file",
         parents=[global_cli]))
 
+    from .convert.tool.api_export import init_subparser
+    init_subparser(subparsers.add_parser(
+        "convert-export-api",
+        parents=[global_cli]))
+
     from .codegen.main import init_subparser
     init_subparser(subparsers.add_parser(
         "codegen",
         parents=[global_cli]))
 
-    args = cli.parse_args(argv)
+    args, remaining_args = cli.parse_known_args(argv)
 
+    dll_manager = None
     if sys.platform == 'win32':
-        add_dll_search_paths(args.dll_paths)
+        dll_manager = add_dll_search_paths(args.dll_paths)
+        dll_manager.add_directories()
 
     if args.print_version:
         print_version()
 
     if not args.subcommand:
-        # the user didn't specify a subcommand. default to 'game'.
-        args = game_cli.parse_args(argv)
+        # the user didn't specify a subcommand. default to 'main'.
+        args = main_cli.parse_args(remaining_args)
+
+    args.dll_manager = dll_manager
 
     # process the shared args
     set_loglevel(verbosity_to_level(args.verbose - args.quiet))
@@ -166,6 +169,11 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
+    # Required for Windows executables (and apparently macOS too)
+    # https://docs.python.org/3/library/multiprocessing.html#multiprocessing.freeze_support
+    # https://pyinstaller.org/en/latest/common-issues-and-pitfalls.html#multi-processing
+    multiprocessing.freeze_support()
+
     # openage is complicated and multithreaded; better not use fork.
     multiprocessing.set_start_method('spawn')
 

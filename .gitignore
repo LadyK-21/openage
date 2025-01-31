@@ -4,6 +4,7 @@
 *~
 .*.swp
 /CMakeLists.txt.user
+*.temp
 
 # ELF files
 *.o
@@ -31,6 +32,10 @@ __pycache__
 /build
 /deps
 /.ccls-cache
+/.cache
+
+# Nix build output
+/result
 
 # root dir run script
 /run

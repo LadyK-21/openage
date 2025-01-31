@@ -22,14 +22,14 @@ set_target_properties(libopenage PROPERTIES
 # freetype includedir hint for ubuntu...
 find_path(FREETYPE_INCLUDE_DIRS freetype/freetype.h HINTS /usr/include/freetype2)
 
-# provide apple qt5 location
+# provide apple qt location
 if(APPLE)
 	execute_process(
 		COMMAND brew --prefix
 		OUTPUT_VARIABLE HOMEBREW_PREFIX
 		OUTPUT_STRIP_TRAILING_WHITESPACE
 		)
-	list(APPEND CMAKE_PREFIX_PATH ${HOMEBREW_PREFIX}/opt/qt5)
+	list(APPEND CMAKE_PREFIX_PATH ${HOMEBREW_PREFIX}/opt/qt)
 endif()
 
 # windows does not have libm
@@ -50,11 +50,9 @@ endif()
 
 find_library(FONTCONFIG_LIB fontconfig)
 
+find_package(toml11 REQUIRED)
 find_package(Freetype REQUIRED)
 find_package(PNG REQUIRED)
-find_package(SDL2 CONFIG REQUIRED)
-target_compile_definitions(SDL2::SDL2 INTERFACE SDL_MAIN_HANDLED)
-find_package(SDL2Image REQUIRED)
 find_package(Opusfile REQUIRED)
 find_package(Epoxy REQUIRED)
 find_package(HarfBuzz 1.0.0 REQUIRED)
@@ -63,12 +61,17 @@ find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
 
-set(QT_VERSION_REQ "5.9")
-find_package(Qt5Core ${QT_VERSION_REQ} REQUIRED)
-find_package(Qt5Quick ${QT_VERSION_REQ} REQUIRED)
+set(QT_VERSION_REQ "6.2")
+find_package(Qt6 ${QT_VERSION_REQ} REQUIRED COMPONENTS Core Quick Multimedia)
 
 if(WANT_BACKTRACE)
 	find_package(GCCBacktrace)
+endif()
+
+if(WANT_IWYU)
+	# include-what-you-use warnings during C++ compilation
+	find_program(IWYU_PATH NAMES include-what-you-use iwyu REQUIRED)
+	set_property(TARGET libopenage PROPERTY CXX_INCLUDE_WHAT_YOU_USE "${IWYU_PATH}")
 endif()
 
 ##################################################
@@ -250,20 +253,6 @@ configure_file(
 	"${CMAKE_BINARY_DIR}/openage/config.py"
 )
 
-
-##################################################
-# platform specifics
-if(APPLE)
-	find_path(
-		QTPLATFORM_INCLUDE_DIRS QtPlatformHeaders
-		"${HOMEBREW_PREFIX}/opt/qt5/include"
-		)
-	find_library(COCOA_LIBRARY Cocoa)
-	target_include_directories(libopenage PRIVATE ${COCOA_LIBRARY})
-	target_link_libraries(libopenage PRIVATE ${COCOA_LIBRARY})
-endif()
-
-
 ##################################################
 # directories for header inclusion
 target_include_directories(libopenage
@@ -275,7 +264,6 @@ target_include_directories(libopenage
 	${EPOXY_INCLUDE_DIRS}
 	${OPUS_INCLUDE_DIRS}
 	${PNG_INCLUDE_DIRS}
-	${SDL2IMAGE_INCLUDE_DIRS}
 	${HarfBuzz_INCLUDE_DIRS}
 	${QTPLATFORM_INCLUDE_DIRS}
 )
@@ -299,14 +287,13 @@ target_link_libraries(libopenage
 		${FREETYPE_LIBRARIES}
 		${EPOXY_LIBRARIES}
 		${MATH_LIB}
-		${SDL2IMAGE_LIBRARIES}
-		SDL2::SDL2
 		${UTIL_LIB}
 		${HarfBuzz_LIBRARIES}
 		${RT_LIB}
 		${EXECINFO_LIB}
-		Qt5::Core
-		Qt5::Quick
+		Qt6::Core
+		Qt6::Quick
+		Qt6::Multimedia
 )
 
 ##################################################
@@ -329,15 +316,8 @@ get_codegen_scu_file()
 # are specified above the source file list.
 
 add_sources(libopenage
-	assetmanager.cpp
-	engine.cpp
-	game_control.cpp
-	game_renderer.cpp
-	handlers.cpp
 	main.cpp
 	options.cpp
-	screenshot.cpp
-	texture.cpp
 	${CMAKE_CURRENT_BINARY_DIR}/config.cpp
 	${CMAKE_CURRENT_BINARY_DIR}/version.cpp
 	${CODEGEN_SCU_FILE}
@@ -345,21 +325,20 @@ add_sources(libopenage
 
 pxdgen(
 	main.h
-	engine.h
 )
 
 # add subsystem folders
+add_subdirectory("assets")
 add_subdirectory("audio")
 add_subdirectory("console")
 add_subdirectory("coord")
 add_subdirectory("curve")
 add_subdirectory("cvar")
 add_subdirectory("datastructure")
+add_subdirectory("engine")
 add_subdirectory("error")
 add_subdirectory("event")
-add_subdirectory("gamedata")
 add_subdirectory("gamestate")
-add_subdirectory("gui")
 add_subdirectory("input")
 add_subdirectory("job")
 add_subdirectory("log")
@@ -369,10 +348,7 @@ add_subdirectory("presenter")
 add_subdirectory("pyinterface")
 add_subdirectory("renderer")
 add_subdirectory("rng")
-add_subdirectory("shader")
-add_subdirectory("simulation")
-add_subdirectory("terrain")
 add_subdirectory("testing")
-add_subdirectory("unit")
+add_subdirectory("time")
 add_subdirectory("util")
 add_subdirectory("versions")

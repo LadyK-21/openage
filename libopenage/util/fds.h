@@ -1,11 +1,11 @@
-// Copyright 2014-2019 the openage authors. See copying.md for legal info.
+// Copyright 2014-2024 the openage authors. See copying.md for legal info.
 
 #pragma once
 
 #include <stdlib.h>
 
 #ifndef _WIN32
-#include <termios.h>
+	#include <termios.h>
 #endif
 
 namespace openage {
@@ -89,4 +89,5 @@ public:
 #endif
 };
 
-}} // openage::util
+} // namespace util
+} // namespace openage

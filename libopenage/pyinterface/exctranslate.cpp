@@ -1,4 +1,4 @@
-// Copyright 2015-2019 the openage authors. See copying.md for legal info.
+// Copyright 2015-2023 the openage authors. See copying.md for legal info.
 
 #include "exctranslate.h"
 
@@ -56,7 +56,7 @@ void translate_exc_cpp_to_py() {
 
 	} catch (PyException &exc) {
 
-		if (unlikely(raise_cpp_pyexception == nullptr)) {
+		if (raise_cpp_pyexception == nullptr) [[unlikely]] {
 			throw Error(MSG(err) <<
 				"raise_pyexception_in_py is uninitialized; "
 				"can't translate C++ exception to Python exception.",
@@ -68,7 +68,7 @@ void translate_exc_cpp_to_py() {
 
 	} catch (Error &exc) {
 
-		if (unlikely(raise_cpp_error == nullptr)) {
+		if (raise_cpp_error == nullptr) [[unlikely]] {
 			throw Error(MSG(err) <<
 				"raise_error_in_py is uninitialized; "
 				"can't translate C++ exception to Python exception.",
@@ -91,13 +91,13 @@ void translate_exc_cpp_to_py() {
 
 
 void translate_exc_py_to_cpp() {
-	if (unlikely(describe_py_exception == nullptr)) {
+	if (describe_py_exception == nullptr) [[unlikely]] {
 		throw Error(MSG(err) <<
 			"describe_py_exception is uninitialized; "
 			"can't check for and translate Python exception to C++ exception.");
 	}
 
-	if (likely(not check_for_py_exception())) {
+	if (not check_for_py_exception()) [[likely]] {
 		// no exception has occurred.
 		return;
 	}

@@ -1,10 +1,10 @@
 # Sprite Format Specification
 
-**Format Version:** 1
+**Format Version:** 2
 
 The openage sprite format is a plaintext configuration file format for defining 2D
-animations. It tells the openage renderer which image resources it has to load
-and how sprites in these resources should be displayed.
+animations. It tells the openage renderer which texture resources it has to load
+and how subtextures in these resources should be displayed.
 
 All attributes start with a defined keyword followed by parameter values. Some
 parameters have default values and are optional. The preferred file extension is
@@ -18,30 +18,27 @@ parameters have default values and are optional. The preferred file extension is
 # comments start with # and are ignored
 
 # file version
-version 1
+version 2
 
-# image file reference, relative to this file's location
-imagefile <image_id> <filename>
+# texture file reference, relative to this file's location
+texture <texture_id> <filename>
 
 # the zoom level at which the animation is shown in full detail
-# e.g. scalefactor 2.0 -> full detail at 200% zoom
+# e.g. scalefactor 0.5 -> full detail at 200% zoom
 scalefactor <factor>
 
 # layer definitions
 # all layers will be drawn
-layer <id> mode=off  position=<int>
-layer <id> mode=once position=<int> time_per_frame=<float>
-layer <id> mode=loop position=<int> time_per_frame=<float> replay_delay=<float>
+layer <layer_id> mode=off  position=<int>
+layer <layer_id> mode=once position=<int> time_per_frame=<float>
+layer <layer_id> mode=loop position=<int> time_per_frame=<float> replay_delay=<float>
 
 # define an angle where frames can be assigned to or mirror from an existing angle
 angle <degree> mirror-from=<existing_angle>
 
 # assign frames to their layers and angles.
 # angle is the direction in degrees, etc.
-# *pos, *size and *hotspot is within the source image.
-# all the hotspots of the frames will be drawn at the same pixel (requested by renderer)
-# so that the alignment/movement of the frames is done solely by hotspots.
-frame <frame_idx> <angle> <layer_id> <image_id> <xpos> <ypos> <xsize> <ysize> <xhotspot> <yhotspot>
+frame <frame_idx> <angle> <layer_id> <image_id> <subtex_id>
 ```
 
 
@@ -72,36 +69,37 @@ Version number of the format.
 #### Example
 
 ```
-version 1
+version 2
 ```
 
 
-### `imagefile`
+### `texture`
 
-Tells the renderer which image resources it has to load as spritesheets.
-There has to be at least one `imagefile` defined.
+Tells the renderer which texture resources it has to load.
+There has to be at least one `texture` defined.
 
-Parameter | Type   | Optional | Default value
-----------|--------|----------|--------------
-image_id  | int    | No       | -
-filename  | string | No       | -
+Parameter  | Type   | Optional | Default value
+-----------|--------|----------|--------------
+texture_id | int    | No       | -
+filename   | string | No       | -
 
-**image_id**<br>
+**texture_id**<br>
 Reference ID for the resource used in this file. IDs should start at `0`.
 
 **filename**<br>
-Path to the image resource on the filesystem. The different methods of
-resource referencing are explained in the [file referencing](file_referencing.md)
+Path to the texture resource on the filesystem. The file must be a [texture format file](texture_format_spec.md).
+The different methods of resource referencing are explained in the [file referencing](file_referencing.md)
 docs.
 
 
 #### Example
 
 ```
-imagefile 0 "idle.png"
-imagefile 1 "../../attack.png"
-imagefile 2 "/{aoe2_base}/graphics/attack.png"
+texture 0 "idle.texture"
+texture 1 "../../attack.texture"
+texture 2 "/{aoe2_base}/graphics/attack.texture"
 ```
+
 
 ### `scalefactor`
 
@@ -112,23 +110,23 @@ Parameter | Type  | Optional | Default value
 factor    | float | No       | -
 
 **factor**<br>
-Factor by which sprite images are scaled *down* at default zoom level.
+Factor by which sprite images are scaled at default zoom level.
 This allows for high resolution sprites to be displayed at an
-arbitrary scale. Zooming in counteracts the downscaling. Thus,
-this factor can be used for sprites that should retain high
-image quality with higher zoom levels.
+arbitrary scale. It can be used for sprites that should retain
+high image quality with higher zoom levels.
 
 
 #### Example
 
 ```
 # Assume the sprite image has a size of 100x100
-scalefactor 1.0  # No scaling, 100x100 at default zoom
-scalefactor 2.0  # 50x50 at default zoom; 100x100 at 2x zoom
-scalefactor 4.0  # 25x25 at default zoom; 100x100 at 4x zoom
+# Factors <1 result in downscaling
+scalefactor 1.0   # No scaling, 100x100 at default zoom
+scalefactor 0.5   # 50x50 at default zoom; 100x100 at 2x zoom
+scalefactor 0.25  # 25x25 at default zoom; 100x100 at 4x zoom
 
-# Factors <1 result in upscaling
-scalefactor 0.5  # 200x200 at default zoom; 100x100 at 2x zoom
+# Factors >1 result in upscaling
+scalefactor 2.0  # 200x200 at default zoom; 100x100 at 2x zoom
 ```
 
 ### `layer`
@@ -195,11 +193,15 @@ mirror_from | int   | Yes      | -
 Acts as the ID and center point for the angle. Has to be an integer between
 `0` and `359`.
 
+The angle with center point `degree = 0` is facing the camera, i.e. the game object
+direction should be *towards* the camera. Subsequent angles are ordered *clockwise*, e.g.
+`90` faces left from the camera's point of view, `180` faces up, and `270` faces right.
+
 Frames at an angle are drawn until the angle of the game world object is
 closer to another defined angle.  In other words, as long as the game world
 objects's angle is between
-`(degree - previous_angle_degree) / 2`
-and `(next_angle_degree - degree) / 2`.
+`previous_angle_degree + (degree - previous_angle_degree) / 2`
+and `degree + (next_angle_degree - degree) / 2`.
 
 ```
 angle 0
@@ -227,21 +229,16 @@ angle 270 mirror_from=90
 
 Defines a frame in the animation. Frames have to be defined
 for every angle individually. Sprites displayed in the frame
-are taken from an image resource (spritesheet) defined by the
+are taken from a texture resource (spritesheet) referenced by the
 `imagefile` attribute.
 
-Parameter | Type  | Optional | Default value
-----------|-------|----------|--------------
-frame_idx | int   | No       | -
-angle     | int   | No       | -
-layer_id  | int   | No       | -
-image_id  | int   | No       | -
-xpos      | int   | No       | -
-ypos      | int   | No       | -
-xsize     | int   | No       | -
-ysize     | int   | No       | -
-xhotspot  | int   | No       | -
-yhotspot  | int   | No       | -
+Parameter  | Type  | Optional | Default value
+-----------|-------|----------|--------------
+frame_idx  | int   | No       | -
+angle      | int   | No       | -
+layer_id   | int   | No       | -
+texture_id | int   | No       | -
+subtex_id  | int   | No       | -
 
 **frame_idx**<br>
 Index of the frame in the animation for the specified `angle`. The
@@ -255,51 +252,22 @@ ID of the angle at which the frame is displayed.
 **layer_id**<br>
 ID of the layer on which the frame is drawn.
 
-**image_id**<br>
-ID of the image resource that is used as a source for the sprite
-displayed in this frame.
+**texture_id**<br>
+ID of the texture resource that contains the sutexture referenced by
+`subtex_id`.
 
-**xpos**<br>
-Horizontal position of the sprite inside the image resource. The
-sprite's position is the pixel in the upper left corner of the
-sprite (`(0,0)` from the sprite's POV).
-
-**ypos**<br>
-Vertical position of the sprite inside the image resource. The
-sprite's position is the pixel in the upper left corner of the
-sprite (`(0,0)` from the sprite's POV).
-
-**xsize**<br>
-Width of the sprite inside the image resource.
-
-**ysize**<br>
-Height of the sprite inside the image resource.
-
-**xhotspot**<br>
-Horizontal position of the hotsport in the sprite relative to
-its width and height. The hotspot is used for alignment, i.e.
-all animation frames are anchored to their game world object
-at the hotspot.
-
-This can be a negative value.
-
-**yhotspot**<br>
-Vertical position of the hotsport in the sprite relative to
-its width and height. The hotspot is used for alignment, i.e.
-all animation frames are anchored to their game world object
-at the hotspot.
-
-This can be a negative value.
+**subtex_id**<br>
+ID of the subtexture from the referenced texture that is used as a source
+for the sprite displayed in this frame.
 
 
 #### Example
 
 ```
-frame 0 90 1 0 200 200 20 20 9 10
-# frame_idx = 0  -> first frame in the animation
-# angle     = 90 -> attached to angle 90
-# layer_id  = 1  -> drawn on layer 1
-# image_id  = 0  -> taken from image resource with ID 0
-# Sprite is located at (200,200) in spritesheet,
-# has dimensions (20,20) and the hotspot at (9,10)
+frame 0 90 1 0 2
+# frame_idx  = 0  -> first frame in the animation
+# angle      = 90 -> attached to angle 90
+# layer_id   = 1  -> drawn on layer 1
+# texture_id = 0  -> taken from texture resource with ID 0
+# subtex_id  = 2  -> uses subtexture with ID 2 as sprite
 ```

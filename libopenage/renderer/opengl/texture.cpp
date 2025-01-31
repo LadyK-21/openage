@@ -1,4 +1,4 @@
-// Copyright 2015-2019 the openage authors. See copying.md for legal info.
+// Copyright 2015-2024 the openage authors. See copying.md for legal info.
 
 #include "texture.h"
 
@@ -6,13 +6,13 @@
 
 #include <tuple>
 
-#include "../../error/error.h"
 #include "../../datastructure/constexpr_map.h"
+#include "../../error/error.h"
 #include "../../log/log.h"
 
 #include "../resources/texture_data.h"
-#include "render_target.h"
 #include "lookup.h"
+#include "render_target.h"
 
 
 namespace openage {
@@ -20,11 +20,10 @@ namespace renderer {
 namespace opengl {
 
 GlTexture2d::GlTexture2d(const std::shared_ptr<GlContext> &context,
-                         const resources::Texture2dData& data)
-	: Texture2d(data.get_info())
-	, GlSimpleObject(context,
-	                 [] (GLuint handle) { glDeleteTextures(1, &handle); } )
-{
+                         const resources::Texture2dData &data) :
+	Texture2d(data.get_info()),
+	GlSimpleObject(context,
+                   [](GLuint handle) { glDeleteTextures(1, &handle); }) {
 	GLuint handle;
 	glGenTextures(1, &handle);
 	this->handle = handle;
@@ -40,25 +39,30 @@ GlTexture2d::GlTexture2d(const std::shared_ptr<GlContext> &context,
 	glPixelStorei(GL_UNPACK_ALIGNMENT, this->info.get_row_alignment());
 
 	glTexImage2D(
-		GL_TEXTURE_2D, 0,
-		std::get<0>(fmt_in_out), size.first, size.second, 0,
-		std::get<1>(fmt_in_out), std::get<2>(fmt_in_out), data.get_data()
-	);
+		GL_TEXTURE_2D,
+		0,
+		std::get<0>(fmt_in_out),
+		size.first,
+		size.second,
+		0,
+		std::get<1>(fmt_in_out),
+		std::get<2>(fmt_in_out),
+		data.get_data());
 
 	// drawing settings
 	// TODO these are outdated, use sampler settings
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	log::log(MSG(dbg) << "Created OpenGL texture from data");
+	log::log(MSG(dbg) << "Created OpenGL texture from data (size: "
+	                  << size.first << "x" << size.second << ")");
 }
 
 GlTexture2d::GlTexture2d(const std::shared_ptr<GlContext> &context,
-                         const resources::Texture2dInfo &info)
-	: Texture2d(info)
-	, GlSimpleObject(context,
-	                 [] (GLuint handle) { glDeleteTextures(1, &handle); } )
-{
+                         const resources::Texture2dInfo &info) :
+	Texture2d(info),
+	GlSimpleObject(context,
+                   [](GLuint handle) { glDeleteTextures(1, &handle); }) {
 	GLuint handle;
 	glGenTextures(1, &handle);
 	this->handle = handle;
@@ -67,21 +71,27 @@ GlTexture2d::GlTexture2d(const std::shared_ptr<GlContext> &context,
 
 	auto fmt_in_out = GL_PIXEL_FORMAT.get(this->info.get_format());
 
-	auto dims = this->info.get_size();
+	auto size = this->info.get_size();
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, this->info.get_row_alignment());
 
 	glTexImage2D(
-		GL_TEXTURE_2D, 0,
-		std::get<0>(fmt_in_out), dims.first, dims.second, 0,
-		std::get<1>(fmt_in_out), std::get<2>(fmt_in_out), nullptr
-	);
+		GL_TEXTURE_2D,
+		0,
+		std::get<0>(fmt_in_out),
+		size.first,
+		size.second,
+		0,
+		std::get<1>(fmt_in_out),
+		std::get<2>(fmt_in_out),
+		nullptr);
 
 	// TODO these are outdated, use sampler settings
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	log::log(MSG(dbg) << "Created OpenGL texture from parameters");
+	log::log(MSG(dbg) << "Created OpenGL texture from info parameters (size: "
+	                  << size.first << "x" << size.second << ")");
 }
 
 resources::Texture2dData GlTexture2d::into_data() {
@@ -96,7 +106,7 @@ resources::Texture2dData GlTexture2d::into_data() {
 	return resources::Texture2dData(resources::Texture2dInfo(this->info), std::move(data));
 }
 
-void GlTexture2d::upload(resources::Texture2dData const& data) {
+void GlTexture2d::upload(resources::Texture2dData const &data) {
 	if (this->info != data.get_info()) {
 		throw Error(MSG(err) << "Tried to upload texture data of different format into an existing GPU texture.");
 	}
@@ -106,11 +116,9 @@ void GlTexture2d::upload(resources::Texture2dData const& data) {
 	auto size = this->info.get_size();
 	auto fmt_in_out = GL_PIXEL_FORMAT.get(this->info.get_format());
 
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
-	                size.first, size.second,
-	                std::get<1>(fmt_in_out), std::get<2>(fmt_in_out),
-	                data.get_data()
-	);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.first, size.second, std::get<1>(fmt_in_out), std::get<2>(fmt_in_out), data.get_data());
 }
 
-}}} // openage::renderer::opengl
+} // namespace opengl
+} // namespace renderer
+} // namespace openage

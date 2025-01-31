@@ -1,4 +1,4 @@
-// Copyright 2015-2021 the openage authors. See copying.md for legal info.
+// Copyright 2015-2024 the openage authors. See copying.md for legal info.
 
 /*
  * This file holds handlers for std::terminate and SIGSEGV.
@@ -12,22 +12,23 @@
 
 #include "handlers.h"
 
+#include <cstring>
 #include <exception>
 #include <iostream>
-#include <cstring>
 
 #ifdef _MSC_VER
-#include <io.h>
+	#include <io.h>
 #else
-#include <unistd.h>
+	#include <unistd.h>
 #endif
 
-#include "../util/signal.h"
-#include "../util/init.h"
-#include "../util/language.h"
+#include "util/init.h"
+#include "util/language.h"
+#include "util/signal.h"
 
-#include "error.h"
-#include "stackanalyzer.h"
+#include "error/error.h"
+#include "error/stackanalyzer.h"
+
 
 namespace openage {
 namespace error {
@@ -73,23 +74,25 @@ util::OnDeInit restore_handlers([]() {
 	std::cout << "\n\x1b[31;1mFATAL: terminate has been called\x1b[m" << std::endl;
 
 	if (std::exception_ptr e_ptr = std::current_exception()) {
-		std::cout << "\n\x1b[33muncaught exception\x1b[m\n" << std::endl;
+		std::cout << "\n\x1b[33muncaught exception\x1b[m\n"
+				  << std::endl;
 
 		try {
 			std::rethrow_exception(e_ptr);
-		} catch (Error &exc) {
+		}
+		catch (Error &exc) {
 			std::cout << exc << std::endl;
-		} catch (std::exception &exc) {
-			std::cout <<
-				"std::exception of type " <<
-				util::typestring(exc) <<
-				": " << exc.what() << std::endl;
-		} catch (...) {
+		}
+		catch (std::exception &exc) {
+			std::cout << "std::exception of type " << util::typestring(exc) << ": " << exc.what() << std::endl;
+		}
+		catch (...) {
 			std::cout << "non-standard exception object" << std::endl;
 		}
 	}
 
-	std::cout << "\n\x1b[33mcurrent stack:\x1b[m\n" << std::endl;
+	std::cout << "\n\x1b[33mcurrent stack:\x1b[m\n"
+			  << std::endl;
 
 	StackAnalyzer backtrace;
 	backtrace.analyze();
@@ -98,7 +101,8 @@ util::OnDeInit restore_handlers([]() {
 	// die again to enable debugger functionality.
 	// that maybe print some additional useful info that we forgot about.
 	// TODO: we maybe want to prevent that for end-users.
-	std::cout << "\x1b[33mhanding over to the system...\x1b[m\n" << std::endl;
+	std::cout << "\x1b[33mhanding over to the system...\x1b[m\n"
+			  << std::endl;
 	std::terminate();
 }
 
@@ -124,9 +128,12 @@ void exit_handler() {
 	// The actual proper way of exiting the running game is via throwing
 	// an exception or similar action.
 
-	if (exit_ok) { return; }
+	if (exit_ok) {
+		return;
+	}
 
-	std::cout << "\x1b[31;1mexit() was called in an illegal place\x1b[m\n" << std::endl;
+	std::cout << "\x1b[31;1mexit() was called in an illegal place\x1b[m\n"
+			  << std::endl;
 }
 
 
@@ -135,4 +142,5 @@ void set_exit_ok(bool value) {
 }
 
 
-}} // openage::error
+} // namespace error
+} // namespace openage

@@ -1,4 +1,4 @@
-# Copyright 2020-2022 the openage authors. See copying.md for legal info.
+# Copyright 2020-2024 the openage authors. See copying.md for legal info.
 #
 # pylint: disable=too-many-locals
 
@@ -9,7 +9,7 @@ but configurable in openage. E.g. HP.
 from __future__ import annotations
 import typing
 
-from ....entity_object.conversion.converter_object import ConverterObjectGroup,\
+from ....entity_object.conversion.converter_object import ConverterObjectGroup, \
     RawAPIObject
 from ....value_object.conversion.forward_ref import ForwardRef
 from ..aoc.pregen_processor import AoCPregenSubprocessor
@@ -32,6 +32,7 @@ class RoRPregenSubprocessor:
         # Stores pregenerated raw API objects as a container
         pregen_converter_group = ConverterObjectGroup("pregen")
 
+        AoCPregenSubprocessor.generate_activities(full_data_set, pregen_converter_group)
         AoCPregenSubprocessor.generate_attributes(full_data_set, pregen_converter_group)
         AoCPregenSubprocessor.generate_diplomatic_stances(full_data_set, pregen_converter_group)
         AoCPregenSubprocessor.generate_entity_types(full_data_set, pregen_converter_group)
@@ -41,6 +42,7 @@ class RoRPregenSubprocessor:
         # TODO:
         # cls._generate_modifiers(gamedata, pregen_converter_group)
         AoCPregenSubprocessor.generate_terrain_types(full_data_set, pregen_converter_group)
+        AoCPregenSubprocessor.generate_path_types(full_data_set, pregen_converter_group)
         AoCPregenSubprocessor.generate_resources(full_data_set, pregen_converter_group)
         cls.generate_death_condition(full_data_set, pregen_converter_group)
 
@@ -54,8 +56,8 @@ class RoRPregenSubprocessor:
             pregen_object.create_nyan_members()
 
             if not pregen_object.is_ready():
-                raise Exception(f"{repr(pregen_object)}: Pregenerated object is not ready "
-                                "for export. Member or object not initialized.")
+                raise RuntimeError(f"{repr(pregen_object)}: Pregenerated object is not ready "
+                                   "for export. Member or object not initialized.")
 
     @staticmethod
     def generate_death_condition(

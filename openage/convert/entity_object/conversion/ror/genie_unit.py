@@ -1,4 +1,4 @@
-# Copyright 2020-2022 the openage authors. See copying.md for legal info.
+# Copyright 2020-2023 the openage authors. See copying.md for legal info.
 
 """
 Contains structures and API-like objects for game entities from RoR.
@@ -8,8 +8,8 @@ Based on the classes from the AoC converter.
 from __future__ import annotations
 import typing
 
-from ..aoc.genie_unit import GenieUnitLineGroup, GenieBuildingLineGroup,\
-    GenieAmbientGroup, GenieVariantGroup, GenieUnitTaskGroup,\
+from ..aoc.genie_unit import GenieUnitLineGroup, GenieBuildingLineGroup, \
+    GenieAmbientGroup, GenieVariantGroup, GenieUnitTaskGroup, \
     GenieVillagerGroup, GenieGarrisonMode
 
 if typing.TYPE_CHECKING:
@@ -50,7 +50,7 @@ class RoRUnitLineGroup(GenieUnitLineGroup):
 
     def is_garrison(self, civ_id: int = -1) -> bool:
         """
-        Only transport shis can garrison in RoR.
+        Only transport ships can garrison in RoR.
 
         :returns: True if the unit has the unload command (ID: 12).
         """
@@ -229,7 +229,7 @@ class RoRUnitTaskGroup(GenieUnitTaskGroup):
 
     def is_garrison(self, civ_id: int = -1) -> bool:
         """
-        Only transport shis can garrison in RoR.
+        Only transport ships can garrison in RoR.
 
         :returns: True if the unit has the unload command (ID: 12).
         """

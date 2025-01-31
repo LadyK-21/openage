@@ -1,4 +1,4 @@
-# Copyright 2014-2021 the openage authors. See copying.md for legal info.
+# Copyright 2014-2024 the openage authors. See copying.md for legal info.
 #
 # cython: infer_types=True
 # pylint: disable=too-many-locals
@@ -7,37 +7,48 @@ Merges texture frames into a spritesheet or terrain tiles into
 a terrain texture.
 """
 import numpy
-
-from ....log import spam
-from ...entity_object.export.texture import TextureImage
-from ...service.export.png.binpack cimport Packer, DeterministicPacker, RowPacker, ColumnPacker, BinaryTreePacker, BestPacker
-from ...value_object.read.media.hardcoded.texture import (MAX_TEXTURE_DIMENSION, MARGIN,
-                                                          TERRAIN_ASPECT_RATIO)
+from enum import Enum
 
 cimport cython
 cimport numpy
 
+from ....log import spam
+from ...service.export.png.binpack cimport block
+from ...entity_object.export.texture import TextureImage
+from ...service.export.png.binpack cimport DeterministicPacker, RowPacker, ColumnPacker, BinaryTreePacker, BestPacker
+from ...value_object.read.media.hardcoded.texture import (MAX_TEXTURE_DIMENSION, MARGIN,
+                                                          TERRAIN_ASPECT_RATIO)
 
-def merge_frames(texture, custom_packer=None, cache=None):
+class PackerType(Enum):
+    """
+    Packer types
+    """
+    BEST    = 0x00
+
+    ROW     = 0x01
+    COLUMN  = 0x02
+    BINPACK = 0x03
+
+
+def merge_frames(texture, custom_packer=PackerType.BINPACK, cache=None):
     """
     Python wrapper for the Cython function.
 
     :param texture: Texture containing animation frames.
     :param custom_packer: Packer implementation for efficient packing of frames.
-                          If none is specified, the function will try several
-                          packer and chooses the most efficient one.
+                          Uses 2D binpacking by default.
     :param cache: Media cache information with packer settings from a previous run.
     :type texture: Texture
-    :type custom_packer: Packer
+    :type custom_packer: PackerType
     :type cache: list
     """
-    cmerge_frames(texture, cache)
+    cmerge_frames(texture, custom_packer, cache=cache)
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cdef void cmerge_frames(texture, cache=None):
+cdef void cmerge_frames(texture, packer_type=PackerType.BINPACK, cache=None) except *:
     """
     merge all given frames in a texture into a single image atlas.
 
@@ -47,23 +58,32 @@ cdef void cmerge_frames(texture, cache=None):
     :type cache: list
     """
     cdef list frames = texture.frames
+    cdef list blocks = [block(idx, frame.width, frame.height) for idx, frame in enumerate(frames)]
 
     if len(frames) == 0:
-        raise Exception("cannot create texture with empty input frame list")
+        raise ValueError("cannot create texture with empty input frame list")
 
     cdef BestPacker packer
 
     if cache:
-        packer = BestPacker([DeterministicPacker(margin=MARGIN,hints=cache)])
+        packer = BestPacker([DeterministicPacker(margin=MARGIN, hints=cache)])
 
     else:
-        packer = BestPacker([BinaryTreePacker(margin=MARGIN, aspect_ratio=1),
-                             BinaryTreePacker(margin=MARGIN,
-                                              aspect_ratio=TERRAIN_ASPECT_RATIO),
-                             RowPacker(margin=MARGIN),
-                             ColumnPacker(margin=MARGIN)])
+        if packer_type == PackerType.ROW:
+            packer = BestPacker([RowPacker(margin=MARGIN)])
 
-    packer.pack(frames)
+        elif packer_type == PackerType.COLUMN:
+            packer = BestPacker([ColumnPacker(margin=MARGIN)])
+
+        elif packer_type == PackerType.BINPACK:
+            packer = BestPacker([BinaryTreePacker(margin=MARGIN, aspect_ratio=1)])
+
+        else:
+            packer = BestPacker([BinaryTreePacker(margin=MARGIN, aspect_ratio=1),
+                                 RowPacker(margin=MARGIN),
+                                 ColumnPacker(margin=MARGIN)])
+
+    packer.pack(blocks)
 
     cdef int width = packer.width()
     cdef int height = packer.height()
@@ -88,11 +108,11 @@ cdef void cmerge_frames(texture, cache=None):
     cdef int sub_h
 
     cdef list drawn_frames_meta = []
-    for sub_frame in frames:
+    for index, sub_frame in enumerate(frames):
         sub_w = sub_frame.width
         sub_h = sub_frame.height
 
-        pos_x, pos_y = packer.pos(sub_frame)
+        pos_x, pos_y = packer.pos(index)
 
         spam("drawing frame %03d on atlas at %d x %d...",
              len(drawn_frames_meta), pos_x, pos_y)
@@ -117,11 +137,12 @@ cdef void cmerge_frames(texture, cache=None):
         )
 
     texture.image_data = TextureImage(atlas_data)
-    texture.image_metadata = drawn_frames_meta
+    texture.image_metadata["size"] = (width, height)
+    texture.image_metadata["subtex_metadata"] = drawn_frames_meta
 
     spam("successfully merged %d frames to atlas.", len(frames))
 
     if isinstance(packer, BestPacker):
         # Only generate these values if no custom packer was used
         # TODO: It might make sense to do it anyway for debugging purposes
-        texture.best_packer_hints = packer.get_mapping_hints(frames)
+        texture.best_packer_hints = packer.get_mapping_hints(blocks)

@@ -1,17 +1,12 @@
-// Copyright 2015-2021 the openage authors. See copying.md for legal info.
+// Copyright 2015-2024 the openage authors. See copying.md for legal info.
 
 #include "main.h"
 
-#include "console/console.h"
-#include "engine.h"
-#include "game_control.h"
-#include "game_renderer.h"
-#include "gamedata/color_dummy.h"
-#include "log/log.h"
-#include "shader/program.h"
-#include "shader/shader.h"
-#include "util/file.h"
+#include <memory>
 
+#include "cvar/cvar.h"
+#include "engine/engine.h"
+#include "util/timer.h"
 
 namespace openage {
 
@@ -21,48 +16,48 @@ namespace openage {
  * This is the main entry point to the C++ part.
  */
 int run_game(const main_arguments &args) {
-	log::log(MSG(info)
-	         << "launching engine with "
-	         << args.root_path
-	         << " and fps limit "
-	         << args.fps_limit);
+	// TODO: store args.gl_debug as default in the cvar system.
 
 	util::Timer timer;
 	timer.start();
 
-	Engine engine{args.root_path, args.fps_limit, args.gl_debug, "openage"};
-
 	// read and apply the configuration files
-	engine.get_cvar_manager().load_all();
+	auto cvar_manager = std::make_shared<cvar::CVarManager>(args.root_path["cfg"]);
+	cvar_manager->load_all();
 
-	// initialize terminal colors
-	std::vector<gamedata::palette_color> termcolors = util::read_csv_file<gamedata::palette_color>(
-		args.root_path["assets/converted/termcolors.docx"]
-	);
-
-	// TODO: move inside the engine
-	// TODO: support multiple consoles
-	console::Console console{&engine};
-	console.load_colors(termcolors);
-	console.register_to_engine();
-
-	log::log(MSG(info).fmt("Loading time [engine]: %5.3f s", timer.getval() / 1.0e9));
-
-	timer.start();
-
-	{
-		// create components that use the engine.
-		GameRenderer renderer{&engine};
-
-		log::log(MSG(info).fmt("Loading time   [game]: %5.3f s", timer.getval() / 1.0e9));
-
-		// run main loop
-		engine.run();
+	// set engine run_mode
+	openage::engine::Engine::mode run_mode = openage::engine::Engine::mode::FULL;
+	if (args.headless) {
+		run_mode = openage::engine::Engine::mode::HEADLESS;
 	}
 
-	log::log(INFO << "cya!");
+	// convert window arguments to window settings
+	renderer::window_settings win_settings = {};
+	win_settings.width = args.window_args.width;
+	win_settings.height = args.window_args.height;
+	win_settings.vsync = args.window_args.vsync;
+
+	renderer::window_mode wmode;
+	if (args.window_args.mode == "fullscreen") {
+		wmode = renderer::window_mode::FULLSCREEN;
+	}
+	else if (args.window_args.mode == "borderless") {
+		wmode = renderer::window_mode::BORDERLESS;
+	}
+	else if (args.window_args.mode == "windowed") {
+		wmode = renderer::window_mode::WINDOWED;
+	}
+	else {
+		throw Error(MSG(err) << "Invalid window mode: " << args.window_args.mode);
+	}
+	win_settings.mode = wmode;
+	win_settings.debug = args.gl_debug;
+
+	openage::engine::Engine engine{run_mode, args.root_path, args.mods, win_settings};
+
+	engine.loop();
 
 	return 0;
 }
 
-} // openage
+} // namespace openage

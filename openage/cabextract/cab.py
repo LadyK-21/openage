@@ -1,4 +1,4 @@
-# Copyright 2015-2022 the openage authors. See copying.md for legal info.
+# Copyright 2015-2024 the openage authors. See copying.md for legal info.
 
 """
 Provides CABFile, an extractor for the MSCAB format.
@@ -18,7 +18,7 @@ from ..log import dbg
 from ..util.filelike.readonly import PosSavingReadOnlyFileLikeObject
 from ..util.filelike.stream import StreamFragment
 from ..util.files import read_guaranteed, read_nullterminated_string
-from ..util.fslike.filecollection import FileCollection
+from ..util.fslike.filecollection import FileCollection, FileEntry
 from ..util.math import INF
 from ..util.strings import try_decode
 from ..util.struct import NamedStruct, Flags
@@ -216,6 +216,28 @@ class CFData(NamedStruct):
             raise ValueError("checksum error in MSCAB data block")
 
 
+class CABEntry(FileEntry):
+    """
+    Entry in a CAB file.
+    """
+
+    def __init__(self, fileobj: CFFile):
+        self.fileobj = fileobj
+
+    def open_r(self):
+        return StreamFragment(
+            self.fileobj.folder.plain_stream,
+            self.fileobj.pos,
+            self.fileobj.size
+        )
+
+    def size(self) -> int:
+        return self.fileobj.size
+
+    def mtime(self) -> float:
+        return self.fileobj.timestamp
+
+
 class CABFile(FileCollection):
     """
     The actual file system-like CAB object.
@@ -230,17 +252,17 @@ class CABFile(FileCollection):
     descriptions. Most CAB file issues should cause the constructor to fail.
     """
 
-    def __init__(self, cab: FileLikeObject):
+    def __init__(self, cab: FileLikeObject, offset: int = 0):
         super().__init__()
 
         # read header
-        cab.seek(0)
+        cab.seek(offset)
         header = CFHeader.read(cab)
 
         # verify magic number
         if header.signature != b"MSCF":
-            raise Exception("invalid CAB file signature: " +
-                            repr(header.signature))
+            raise SyntaxError("invalid CAB file signature: " +
+                              repr(header.signature))
 
         # read reserve header, if present
         if header.flags.reserve_present:
@@ -264,36 +286,29 @@ class CABFile(FileCollection):
         dbg(header)
         self.header = header
 
-        self.folders = tuple(self.read_folder_headers(cab))
+        self.folders = tuple(self.read_folder_headers(cab, offset))
 
         # {filename: fileobj}, {subdirname: subdir}
         self.rootdir = OrderedDict(), OrderedDict()
 
-        for fileobj in self.read_file_headers(cab):
+        for fileobj in self.read_file_headers(cab, offset):
             if self.is_file(fileobj.path) or self.is_dir(fileobj.path):
                 raise ValueError(
                     "CABFile has multiple entries with the same path: " +
                     b'/'.join(fileobj.path).decode())
 
-            def open_r(fileobj=fileobj):
-                """ Returns a opened ('rb') file-like object for fileobj. """
-                return StreamFragment(
-                    fileobj.folder.plain_stream,
-                    fileobj.pos,
-                    fileobj.size
-                )
+            file_entry = CABEntry(fileobj)
 
-            self.add_fileentry(fileobj.path, (
-                open_r,
-                None,
-                lambda fileobj=fileobj: fileobj.size,
-                lambda fileobj=fileobj: fileobj.timestamp
-            ))
+            self.add_fileentry(fileobj.path, file_entry)
 
     def __repr__(self):
         return "CABFile"
 
-    def read_folder_headers(self, cab: FileLikeObject) -> Generator[CFFolder, None, None]:
+    def read_folder_headers(
+        self,
+        cab: FileLikeObject,
+        offset: int
+    ) -> Generator[CFFolder, None, None]:
         """
         Called during the constructor run.
 
@@ -314,7 +329,7 @@ class CABFile(FileCollection):
             # create compressed data stream
             compressed_data_stream = CABFolderStream(
                 cab,
-                folder.coffCabStart,
+                folder.coffCabStart + offset,
                 folder.cCFData,
                 self.header.reserved_data.cbCFData)
 
@@ -326,10 +341,10 @@ class CABFile(FileCollection):
                 folder.plain_stream = compressed_data_stream
 
             elif compression_type == 1:
-                raise Exception("MSZIP compression is unsupported")
+                raise SyntaxError("MSZIP compression is unsupported")
 
             elif compression_type == 2:
-                raise Exception("Quantum compression is unsupported")
+                raise SyntaxError("Quantum compression is unsupported")
 
             elif compression_type == 3:
                 window_bits = (folder.typeCompress >> 8) & 0x1f
@@ -346,20 +361,20 @@ class CABFile(FileCollection):
                 folder.plain_stream = StreamSeekBuffer(unseekable_plain_stream)
 
             else:
-                raise Exception(f"Unknown compression type {compression_type:d}")
+                raise SyntaxError(f"Unknown compression type {compression_type:d}")
 
             dbg(folder)
             yield folder
 
-    def read_file_headers(self, cab: FileLikeObject) -> Generator[CFFile, None, None]:
+    def read_file_headers(self, cab: FileLikeObject, offset: int) -> Generator[CFFile, None, None]:
         """
         Called during the constructor run.
 
         Reads the headers for all files and yields CFFile objects.
         """
         # seek to the correct position
-        if cab.tell() != self.header.coffFiles:
-            cab.seek(self.header.coffFiles)
+        if cab.tell() != self.header.coffFiles + offset:
+            cab.seek(self.header.coffFiles + offset)
             dbg("cabfile has nonstandard format: seek to header.coffFiles was required")
 
         for _ in range(self.header.cFiles):
@@ -397,7 +412,7 @@ class CABFile(FileCollection):
             day = (fileobj.date >> 0) & 0x001f
 
             # it's sort of sad that there's no bit for AM/PM.
-            hour = (fileobj.time >> 11)
+            hour = fileobj.time >> 11
             minute = (fileobj.time >> 5) & 0x003f
             sec = (fileobj.time << 1) & 0x003f
 

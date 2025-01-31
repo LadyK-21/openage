@@ -1,4 +1,4 @@
-# Copyright 2015-2021 the openage authors. See copying.md for legal info.
+# Copyright 2015-2024 the openage authors. See copying.md for legal info.
 
 """ Lists of all possible tests; enter your tests here. """
 
@@ -26,7 +26,6 @@ def tests_py():
     yield "openage.assets.test"
     yield ("openage.cabextract.test.test", "test CAB archive extraction",
            lambda env: env["has_assets"])
-    yield "openage.convert.service.init.changelog.test"
     yield "openage.cppinterface.exctranslate_tests.cpp_to_py"
     yield ("openage.cppinterface.exctranslate_tests.cpp_to_py_bounce",
            "translates the exception back and forth a few times")
@@ -50,8 +49,14 @@ def demos_py():
            "encodes an opus file from a wave file")
     yield ("openage.event.demo.curvepong",
            "play pong on steroids through future prediction")
+    yield ("openage.gamestate.tests.simulation_demo",
+           "showcases the game simulation")
+    yield ("openage.pathfinding.tests.path_demo",
+           "showcases the pathfinding system")
     yield ("openage.renderer.tests.renderer_demo",
-           "showcases the new renderer")
+           "showcases the renderer")
+    yield ("openage.renderer.tests.renderer_stresstest",
+           "stresstests for the renderer")
     yield ("openage.main.tests.engine_demo",
            "showcases the engine features")
 
@@ -81,6 +86,7 @@ def tests_cpp():
     yield "openage::datastructure::tests::pairing_heap"
     yield "openage::job::tests::test_job_manager"
     yield "openage::path::tests::path_node", "pathfinding"
+    yield "openage::path::tests::flow_field", "pathfinding"
     yield "openage::pyinterface::tests::pyobject"
     yield "openage::pyinterface::tests::err_py_to_cpp"
     yield "openage::renderer::tests::font"
@@ -95,7 +101,6 @@ def tests_cpp():
     yield "openage::util::tests::vector"
     yield "openage::util::tests::siphash"
     yield "openage::util::tests::array_conversion"
-    yield "openage::input::tests::parse_event_string", "keybinds parsing"
     yield "openage::curve::tests::container"
     yield "openage::curve::tests::curve_types"
     yield "openage::event::tests::eventtrigger"
@@ -112,6 +117,10 @@ def demos_cpp():
            "showcases console as an interactive terminal on your current tty")
     yield ("openage::error::demo",
            "showcases the openage exceptions, including backtraces")
+    yield ("openage::gamestate::tests::activity_demo",
+           "showcases the activity system in the gamestate")
+    yield ("openage::input::tests::action_demo",
+           "showcases the low-level input system")
     yield ("openage::log::tests::demo",
            "showcases the logging system")
     yield ("openage::pyinterface::tests::err_py_to_cpp_demo",

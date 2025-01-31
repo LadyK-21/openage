@@ -1,6 +1,6 @@
 # Blendmask Format Specification
 
-**Format Version:** 1
+**Format Version:** 2
 
 The openage blendmask format is a plaintext configuration file format for defining
 a blending pattern using alpha masks. A blendmask defines a table of directional filters
@@ -22,17 +22,17 @@ parameters have default values and are optional. The preferred file extension is
 # comments start with # and are ignored
 
 # file version
-version 1
+version 2
 
-# source image definitions
-imagefile <image_id> <filename>
+# texture file reference, relative to this file's location
+texture <texture_id> <filename>
 
-# the zoom level at which the texture is shown in full detail
-# e.g. scalefactor 2.0 -> full detail at 200% zoom
+# the zoom level at which the animation is shown in full detail
+# e.g. scalefactor 0.5 -> full detail at 200% zoom
 scalefactor <factor>
 
 # selection of blendomatic borders
-mask <directions> <image_id> <xpos> <ypos> <xsize> <ysize>
+mask <directions> <texture_id> <subtex_id>
 ```
 
 
@@ -51,7 +51,7 @@ token    | `off`   | Alphanumeric predefined keyword
 
 ### `version`
 
-Version of the blendtable format. Increments every time the syntax
+Version of the blendmask format. Increments every time the syntax
 or keywords of the format change.
 
 Parameter  | Type   | Optional | Default value
@@ -65,7 +65,35 @@ Version number of the format.
 #### Example
 
 ```
-version 1
+version 2
+```
+
+
+### `texture`
+
+Tells the renderer which texture resources it has to load.
+There has to be at least one `texture` defined.
+
+Parameter  | Type   | Optional | Default value
+-----------|--------|----------|--------------
+texture_id | int    | No       | -
+filename   | string | No       | -
+
+**texture_id**<br>
+Reference ID for the resource used in this file. IDs should start at `0`.
+
+**filename**<br>
+Path to the texture resource on the filesystem. The file must be a [texture format file](texture_format_spec.md).
+The different methods of resource referencing are explained in the [file referencing](file_referencing.md)
+docs.
+
+
+#### Example
+
+```
+texture 0 "grass.texture"
+texture 1 "../../grass.texture"
+texture 2 "/{aoe2_base}/graphics/grass.texture"
 ```
 
 
@@ -78,43 +106,24 @@ Parameter | Type  | Optional | Default value
 factor    | float | No       | -
 
 **factor**<br>
-Factor by which textures are scaled *down* at default zoom level.
-This allows for high resolution textures to be displayed at an
-arbitrary scale. Zooming in counteracts the downscaling. Thus,
-this factor can be used for textures that should retain high
-image quality with higher zoom levels.
+Factor by which sprite images are scaled at default zoom level.
+This allows for high resolution sprites to be displayed at an
+arbitrary scale. It can be used for sprites that should retain
+high image quality with higher zoom levels.
 
 
 #### Example
 
 ```
-# Assume the texture image has a size of 100x100
-scalefactor 1.0  # No scaling, 100x100 at default zoom
-scalefactor 2.0  # scaled down to 50x50 at default zoom; original 100x100 at 2x zoom in
-scalefactor 4.0  # scaled down to 25x25 at default zoom; original 100x100 at 4x zoom in
+# Assume the sprite image has a size of 100x100
+# Factors <1 result in downscaling
+scalefactor 1.0   # No scaling, 100x100 at default zoom
+scalefactor 0.5   # 50x50 at default zoom; 100x100 at 2x zoom
+scalefactor 0.25  # 25x25 at default zoom; 100x100 at 4x zoom
 
-# Factors <1 result in upscaling
-scalefactor 0.5  # scaled up to 200x200 at default zoom; original 100x100 at 2x zoom out
+# Factors >1 result in upscaling
+scalefactor 2.0  # 200x200 at default zoom; 100x100 at 2x zoom
 ```
-
-
-### `imagefile`
-
-Tells the renderer which image resources it has to load.
-There has to be at least one `imagefile` defined.
-
-Parameter | Type   | Optional | Default value
-----------|--------|----------|--------------
-image_id  | int    | No       | -
-filename  | string | No       | -
-
-**image_id**<br>
-Reference ID for the resource used in this file. IDs should start at `0`.
-
-**filename**<br>
-Path to the image resource for the blend texture on the filesystem. The different methods of
-resource referencing are explained in the [file referencing](file_referencing.md)
-docs.
 
 
 ### `mask`
@@ -124,11 +133,8 @@ Tells the renderer which mask it has to use for what adjacent directions.
 Parameter  | Type      | Optional | Default value
 -----------|-----------|----------|--------------
 directions | int, bits | No       | -
-image_id   | int       | No       | -
-xpos       | int       | No       | -
-ypos       | int       | No       | -
-xsize      | int       | No       | -
-ysize      | int       | No       | -
+texture_id | int       | No       | -
+subtex_id  | int       | No       | -
 
 **directions**<br>
 The directions for which the *blending* terrain touches the *blended*
@@ -167,31 +173,20 @@ blend directions can be found in section [Mandatory Directions](#mandatory-direc
 These mandatory directions are also used as fallback if a pattern
 was left undefined.
 
-**image_id**<br>
-ID of the image resource that is used as a source for the blend mask.
+**texture_id**<br>
+ID of the texture resource that contains the sutexture referenced by
+`subtex_id`.
 
-**xpos**<br>
-Horizontal position of the texture inside the image resource. The
-texture's position is the pixel in the upper left corner of the
-texture (`(0,0)` from the texture's POV).
-
-**ypos**<br>
-Vertical position of the texture inside the image resource. The
-texture's position is the pixel in the upper left corner of the
-texture (`(0,0)` from the texture's POV).
-
-**xsize**<br>
-Width of the texture inside the image resource.
-
-**ysize**<br>
-Height of the texture inside the image resource.
+**subtex_id**<br>
+ID of the subtexture from the referenced texture that is used as a source
+for the mask.
 
 
 #### Example
 
 ```
-mask 131 0 0 0 12 124
-mask 0b00101010 0 0 0 34 12
+mask 131 0 0
+mask 0b00101010 0 0
 ```
 
 ## Mandatory Directions

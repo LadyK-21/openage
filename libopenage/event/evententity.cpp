@@ -1,26 +1,28 @@
-// Copyright 2017-2019 the openage authors. See copying.md for legal info.
+// Copyright 2017-2023 the openage authors. See copying.md for legal info.
 
 #include "evententity.h"
 
-#include <string>
+#include <compare>
 
-#include "event.h"
-#include "eventhandler.h"
-#include "loop.h"
+#include "log/log.h"
+#include "log/message.h"
 
-#include "../log/log.h"
+#include "event/event.h"
+#include "event/event_loop.h"
+#include "event/eventhandler.h"
+#include "util/fixed_point.h"
 
 
 namespace openage::event {
 
 
-void EventEntity::changes(const curve::time_t &time) {
+void EventEntity::changes(const time::time_t &time) {
 	// This target has some change, so we have to notify all dependents
 	// that subscribed on this entity.
 
 	if (this->parent_notifier or this->dependents.size()) {
 		log::log(DBG << "Target: processing change request at t=" << time
-		         << " for EventEntity " << this->idstr() << "...");
+		             << " for EventEntity " << this->idstr() << "...");
 	}
 
 	if (this->parent_notifier != nullptr) {
@@ -28,9 +30,9 @@ void EventEntity::changes(const curve::time_t &time) {
 	}
 
 	// This is a maybe-erase construct so obsolete dependents are cleaned up.
-	for (auto it = this->dependents.begin(); it != this->dependents.end(); ) {
+	for (auto it = this->dependents.begin(); it != this->dependents.end();) {
 		auto dependent = it->lock();
-		if (dependent) {
+		if (dependent and not dependent->get_entity().expired()) {
 			switch (dependent->get_eventhandler()->type) {
 			case EventHandler::trigger_type::DEPENDENCY_IMMEDIATELY:
 			case EventHandler::trigger_type::DEPENDENCY:
@@ -38,7 +40,7 @@ void EventEntity::changes(const curve::time_t &time) {
 				// which depend on this target, will be retriggered
 
 				log::log(DBG << "Target: change at t=" << time
-				         << " for EventEntity " << this->idstr() << " registered");
+				             << " for EventEntity " << this->idstr() << " registered");
 				this->loop->create_change(dependent, time);
 				++it;
 				break;
@@ -46,9 +48,10 @@ void EventEntity::changes(const curve::time_t &time) {
 			case EventHandler::trigger_type::ONCE:
 				// If the dependent is a ONCE-event
 				// forget the change if the once event has been notified already.
-				if (dependent->get_last_changed() > curve::time_t::min_value()) {
+				if (dependent->get_last_changed() > time::time_t::min_value()) {
 					it = this->dependents.erase(it);
-				} else {
+				}
+				else {
 					this->loop->create_change(dependent, time);
 					++it;
 				}
@@ -73,18 +76,18 @@ void EventEntity::changes(const curve::time_t &time) {
 }
 
 
-void EventEntity::trigger(const curve::time_t &last_valid_time) {
+void EventEntity::trigger(const time::time_t &last_valid_time) {
 	// notify all dependent events that are triggered `on_keyframe`
 	// that the this target changed.
 	// the only events that is "notified" by are TRIGGER.
 
-	for (auto it = this->dependents.begin(); it != this->dependents.end(); ) {
+	for (auto it = this->dependents.begin(); it != this->dependents.end();) {
 		auto dependent = it->lock();
 		if (dependent) {
 			if (dependent->get_eventhandler()->type == EventHandler::trigger_type::TRIGGER) {
 				log::log(DBG << "Target: trigger creates a change for "
-				         << dependent->get_eventhandler()->id()
-				         << " at t=" << last_valid_time);
+				             << dependent->get_eventhandler()->id()
+				             << " at t=" << last_valid_time);
 
 				loop->create_change(dependent, last_valid_time);
 			}
@@ -115,4 +118,4 @@ void EventEntity::show_dependents() const {
 	}
 }
 
-} // openage::event
+} // namespace openage::event

@@ -1,40 +1,35 @@
-// Copyright 2013-2021 the openage authors. See copying.md for legal info.
+// Copyright 2013-2023 the openage authors. See copying.md for legal info.
 
 #pragma once
 
 #include <vector>
-#include <SDL2/SDL.h>
 
-#include "buf.h"
-#include "../handlers.h"
 #include "../coord/pixel.h"
-#include "../input/input_manager.h"
-#include "../util/color.h"
 #include "../renderer/font/font.h"
-#include "../gamedata/color_dummy.h"
+#include "../util/color.h"
+#include "buf.h"
 
 namespace openage {
 
-class Engine;
-
 /**
  * In-game console subsystem. Featuring a full terminal emulator.
+ *
+ * TODO: Adapt to new engine subsystems.
  */
 namespace console {
 
-class Console : InputHandler, TickHandler, HudHandler, ResizeHandler {
-
+class Console {
 public:
-	Console(Engine *engine);
+	Console(/* presenter::LegacyDisplay *display */);
 	~Console();
 
 	/**
 	 * load the consoles color table
 	 */
-	void load_colors(std::vector<gamedata::palette_color> &colortable);
+	// void load_colors(std::vector<gamedata::palette_color> &colortable);
 
 	/**
-	 * register this console to the engine.
+	 * register this console to the renderer.
 	 * this leads to the drawing calls, and input handling.
 	 */
 	void register_to_engine();
@@ -51,13 +46,14 @@ public:
 	 */
 	void interpret(const std::string &command);
 
-	bool on_drawhud() override;
-	bool on_tick() override;
-	bool on_input(SDL_Event *event) override;
-	bool on_resize(coord::viewport_delta new_size) override;
+	// bool on_drawhud() override;
+	// bool on_tick() override;
+	// bool on_input(SDL_Event *event) override;
+	// bool on_resize(coord::viewport_delta new_size) override;
 
 protected:
-	Engine *engine;
+	// TODO: Replace with new renderer
+	// presenter::LegacyDisplay *display;
 
 public:
 	coord::camhud bottomleft;
@@ -71,10 +67,11 @@ public:
 	Buf buf;
 	renderer::Font font;
 
-	input::InputContext input_context;
+	// input::legacy::InputContext input_context;
 
 	// the command state
 	std::string command;
 };
 
-}} // openage::console
+} // namespace console
+} // namespace openage

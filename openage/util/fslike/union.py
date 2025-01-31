@@ -1,4 +1,4 @@
-# Copyright 2015-2022 the openage authors. See copying.md for legal info.
+# Copyright 2015-2023 the openage authors. See copying.md for legal info.
 
 """
 Provides Union, a utility class for combining multiple FSLikeObjects to a
@@ -52,7 +52,7 @@ class Union(FSLikeObject):
         """
 
         if not isinstance(pathobj, Path):
-            raise Exception(f"only a fslike.Path can be mounted, not {type(pathobj)}")
+            raise PermissionError(f"only a fslike.Path can be mounted, not {type(pathobj)}")
 
         # search for the right place to insert the mount.
         idx = len(self.mounts) - 1
@@ -115,6 +115,14 @@ class Union(FSLikeObject):
 
         raise UnsupportedOperation(
             "not writable: " + b'/'.join(parts).decode(errors='replace'))
+
+    def open_a(self, parts):
+        for path in self.candidate_paths(parts):
+            if path.writable():
+                return path.open_a()
+
+        raise UnsupportedOperation(
+            "not appendable: " + b'/'.join(parts).decode(errors='replace'))
 
     def resolve_r(self, parts):
         for path in self.candidate_paths(parts):

@@ -1,11 +1,25 @@
 add_sources(libopenage
+    definitions.cpp
+    entity_factory.cpp
+	game_entity.cpp
+    game_state.cpp
 	game.cpp
+	manager.cpp
+    map.cpp
 	player.cpp
-	terrain.cpp
+    simulation.cpp
 	terrain_chunk.cpp
-	types.cpp
+    terrain_factory.cpp
+    terrain_tile.cpp
+	terrain.cpp
+    types.cpp
 	world.cpp
+	universe.cpp
 )
 
-# TODO: remove once migration is done.
-add_subdirectory(old/)
+add_subdirectory(activity/)
+add_subdirectory(api/)
+add_subdirectory(component/)
+add_subdirectory(demo/)
+add_subdirectory(event/)
+add_subdirectory(system/)

@@ -9,12 +9,12 @@ pkgs.mkShell {
     #pkgs.gdb
     pkgs.cmake
     pkgs.gnumake
-    pkgs.qt5.full
+    pkgs.qt6.full
     #pkgs.qtcreator
 
     pkgs.eigen
     pkgs.python39
-    pkgs.python39Packages.jinja2
+    pkgs.python39Packages.mako
     pkgs.python39Packages.pillow
     pkgs.python39Packages.numpy
     pkgs.python39Packages.lz4
@@ -27,13 +27,12 @@ pkgs.mkShell {
     pkgs.ftgl
     pkgs.fontconfig
     pkgs.harfbuzz
-    pkgs.SDL2
-    pkgs.SDL2_image
     pkgs.opusfile
     pkgs.libopus
     pkgs.python39Packages.pylint
     pkgs.python39Packages.toml
-    pkgs.libsForQt5.qt5.qtdeclarative
-    pkgs.libsForQt5.qt5.qtquickcontrols
+    pkgs.libsForQt6.qt6.qtdeclarative
+    pkgs.libsForQt6.qt6.qtquickcontrols
+    pkgs.libsForQt6.qt6.qtmultimedia
   ];
 }

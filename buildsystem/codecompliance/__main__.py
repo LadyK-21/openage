@@ -1,4 +1,4 @@
-# Copyright 2014-2022 the openage authors. See copying.md for legal info.
+# Copyright 2014-2024 the openage authors. See copying.md for legal info.
 
 """
 Entry point for the code compliance checker.
@@ -29,9 +29,9 @@ def parse_args():
                      help=("check whether all git authors are in copying.md. "
                            "repo must be a git repository."))
     cli.add_argument("--cppstyle", action="store_true",
-                     help=("check the cpp code style"))
+                     help="check the cpp code style")
     cli.add_argument("--cython", action="store_true",
-                     help=("check if cython is turned off"))
+                     help="check if cython is turned off")
     cli.add_argument("--headerguards", action="store_true",
                      help="check all header guards")
     cli.add_argument("--legal", action="store_true",
@@ -40,7 +40,7 @@ def parse_args():
                      help=("check whether files in the repo have the "
                            "correct access bits (-> 0644) "))
     cli.add_argument("--pylint", action="store_true",
-                     help=("run pylint on the python code"))
+                     help="run pylint on the python code")
     cli.add_argument("--pystyle", action="store_true",
                      help=("check whether the python code complies with "
                            "(a selected subset of) pep8."))
@@ -51,7 +51,7 @@ def parse_args():
                            "copyright year matches the git history."))
 
     cli.add_argument("--fix", action="store_true",
-                     help=("try to automatically fix the found issues"))
+                     help="try to automatically fix the found issues")
 
     cli.add_argument("-v", "--verbose", action="count", default=0,
                      help="increase program verbosity")
@@ -99,7 +99,7 @@ def process_args(args, error):
         error("no checks were specified")
 
     has_git = bool(shutil.which('git'))
-    is_git_repo = os.path.isdir('.git')
+    is_git_repo = os.path.exists('.git')
 
     if args.only_changed_files and not all((has_git, is_git_repo)):
         error("can not check only changed files: git is required")
@@ -140,7 +140,7 @@ def get_changed_files(gitref):
         file_list = subprocess.check_output(invocation)
 
     except subprocess.CalledProcessError as exc:
-        raise Exception(
+        raise RuntimeError(
             "could not determine list of recently-changed files with git"
         ) from exc
 
@@ -231,7 +231,7 @@ def find_all_issues(args, check_files=None):
 
     if args.pystyle:
         from .pystyle import find_issues
-        yield from find_issues(check_files, ('openage', 'buildsystem'))
+        yield from find_issues(check_files, ('openage', 'buildsystem', 'etc/gdb_pretty'))
 
     if args.cython:
         from buildsystem.codecompliance.cython import find_issues
@@ -243,12 +243,12 @@ def find_all_issues(args, check_files=None):
 
     if args.pylint:
         from .pylint import find_issues
-        yield from find_issues(check_files, ('openage', 'buildsystem'))
+        yield from find_issues(check_files, ('openage', 'buildsystem', 'etc/gdb_pretty'))
 
     if args.textfiles:
         from .textfiles import find_issues
         yield from find_issues(
-            ('openage', 'libopenage', 'buildsystem', 'doc', 'legal'),
+            ('openage', 'libopenage', 'buildsystem', 'doc', 'legal', 'etc/gdb_pretty'),
             ('.pxd', '.pyx', '.pxi', '.py',
              '.h', '.cpp', '.template',
              '', '.txt', '.md', '.conf',
@@ -257,13 +257,13 @@ def find_all_issues(args, check_files=None):
     if args.legal:
         from .legal import find_issues
         yield from find_issues(check_files,
-                               ('openage', 'buildsystem', 'libopenage'),
+                               ('openage', 'buildsystem', 'libopenage', 'etc/gdb_pretty'),
                                args.test_git_change_years)
 
     if args.filemodes:
         from .modes import find_issues
         yield from find_issues(check_files, ('openage', 'buildsystem',
-                                             'libopenage'))
+                                             'libopenage', 'etc/gdb_pretty'))
 
 
 if __name__ == '__main__':

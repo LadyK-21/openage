@@ -1,4 +1,4 @@
-# Copyright 2020-2022 the openage authors. See copying.md for legal info.
+# Copyright 2020-2024 the openage authors. See copying.md for legal info.
 #
 # pylint: disable=too-many-arguments,too-many-locals,too-many-branches
 """
@@ -126,7 +126,7 @@ def iterate_game_versions(
 
             expansions.append(game_expansion)
 
-    return GameVersion(edition=best_edition, expansions=expansions)
+    return GameVersion(edition=best_edition, expansions=tuple(expansions))
 
 
 def create_version_objects(srcdir: Directory) -> tuple[list[GameEdition], list[GameExpansion]]:
@@ -180,7 +180,7 @@ def create_game_obj(
     game_name = game_info['name']
     game_id = game_info['game_edition_id']
     support = game_info['support']
-    modpacks = game_info['targetmod']
+    modpacks = game_info['targetmods']
     if not expansion:
         expansions = game_info['expansions']
 
@@ -191,6 +191,11 @@ def create_game_obj(
     for media_type in game_info['mediapaths']:
         game_mediapaths.append(
             (media_type, game_info['mediapaths'][media_type]))
+
+    # add install dirs for the game
+    game_installpaths = {}
+    if 'installpaths' in game_info:
+        game_installpaths = game_info['installpaths']
 
     # add version hashes from the auxiliary file specific for the game
     game_hash_path = aux_path["version_hashes.toml"]
@@ -217,7 +222,7 @@ def create_game_obj(
             ))
 
         else:
-            raise Exception(
+            raise SyntaxError(
                 f"{game_hash_path}: Unrecognized file version: '{file_version}'")
 
     # Check if there is a media cache file and save the path if it exists
@@ -229,4 +234,5 @@ def create_game_obj(
                              game_mediapaths, modpacks, **flags)
 
     return GameEdition(game_name, game_id, support, game_version_info,
-                       game_mediapaths, modpacks, expansions, **flags)
+                       game_mediapaths, game_installpaths, modpacks,
+                       expansions, **flags)

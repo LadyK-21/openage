@@ -1,16 +1,18 @@
-// Copyright 2017-2019 the openage authors. See copying.md for legal info.
+// Copyright 2017-2024 the openage authors. See copying.md for legal info.
 
 #pragma once
 
+#include <cstddef>
 #include <memory>
 
-#include "eventhandler.h"
-#include "../curve/curve.h"
+#include "event/eventhandler.h"
+#include "time/time.h"
+
 
 namespace openage::event {
-
-class EventQueue;
 class EventEntity;
+
+using event_hash_t = size_t;
 
 /**
  * The actual one event that may be called - it is used to manage the event itself.
@@ -34,17 +36,17 @@ public:
 	 * Reschedule will call the predict_invoke_time method to initiate a reschedule
 	 * for the event it uses the reference_time as base for its calculation
 	 */
-	void reschedule(const curve::time_t reference_time);
+	void reschedule(const time::time_t reference_time);
 
-	size_t hash() const {
+	event_hash_t hash() const {
 		return this->myhash;
 	}
 
-	const curve::time_t &get_time() const {
+	const time::time_t &get_time() const {
 		return this->time;
 	}
 
-	void set_time(const curve::time_t &t) {
+	void set_time(const time::time_t &t) {
 		this->time = t;
 	}
 
@@ -61,9 +63,14 @@ public:
 	void depend_on(const std::shared_ptr<EventEntity> &dependency);
 
 	/**
+	 * Cancel the event.
+	 */
+	void cancel(const time::time_t reference_time);
+
+	/**
 	 * For sorting events by their trigger time.
 	 */
-	bool operator <(const Event &other) const;
+	bool operator<(const Event &other) const;
 
 	/**
 	 * When a change happens on an EventEntity (this->entity),
@@ -73,14 +80,14 @@ public:
 	 * When changes happen after `last_change_time` in the same time-reaching-round,
 	 * they can be ignored since the earlies point in time determines all implications.
 	 */
-	void set_last_changed(const curve::time_t &t) {
+	void set_last_changed(const time::time_t &t) {
 		this->last_change_time = t;
 	}
 
 	/**
 	 * Get the time the  event was changed the last time.
 	 */
-	const curve::time_t &get_last_changed() const {
+	const time::time_t &get_last_changed() const {
 		return this->last_change_time;
 	}
 
@@ -100,14 +107,14 @@ private:
 	 * Time this event occurs/occured.
 	 * It establishes the order of events in the EventQueue.
 	 */
-	curve::time_t time;
+	time::time_t time;
 
 	/** Time this event was registered to be changed last. */
-	curve::time_t last_change_time = curve::time_t::min_value();
+	time::time_t last_change_time = time::time_t::min_value();
 
 	/** Precalculated std::hash for the event */
-	size_t myhash;
+	event_hash_t myhash;
 };
 
 
-} // openage::event
+} // namespace openage::event

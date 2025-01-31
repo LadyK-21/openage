@@ -1,119 +1,195 @@
-// Copyright 2015-2018 the openage authors. See copying.md for legal info.
+// Copyright 2015-2024 the openage authors. See copying.md for legal info.
 
 #pragma once
 
-#include <functional>
-#include <stack>
 #include <unordered_map>
 #include <vector>
 
-#include "action.h"
-#include "event.h"
+#include "input/action.h"
+#include "input/event.h"
 
-namespace openage {
-namespace input {
+namespace openage::input {
 
-class InputManager;
+namespace camera {
+class BindingContext;
+}
 
+namespace game {
+class BindingContext;
+}
+
+namespace hud {
+class BindingContext;
+}
 
 /**
  * An input context contains all keybindings and actions
  * active in e.g. the HUD only.
- * For the console, there's a different input context.
  * That way, each context can have the same keys
  * assigned to different actions, the active context
  * decides, which one to trigger.
  */
 class InputContext {
-
 public:
 	/**
-	 * Create an unbound input context.
+	 * Create an input context.
+	 *
+	 * @param id Unique identifier.
 	 */
-	InputContext();
-
-	/**
-	 * Create a bound context, assigned to its manager.
-	 */
-	InputContext(InputManager *manager);
+	InputContext(const std::string id);
 
 	virtual ~InputContext() = default;
 
 	/**
-	 * a list of all keys of this context
-	 * which are bound currently in the active context.
+	 * Get the unique ID of the context.
 	 *
-	 * TODO: move this method to the input manager.
-	 *       as InputManager::active_binds(const InputContext &) const;
+	 * @return Context ID.
 	 */
-	std::vector<std::string> active_binds() const;
+	const std::string &get_id();
 
 	/**
-	 * bind a specific action idetifier
-	 * this is the highest matching priority
+	 * Set the associated context for binding input events to game events.
+	 *
+	 * @param bindings Binding context for gamestate events.
 	 */
-	void bind(action_t type, const action_func_t act);
+	void set_game_bindings(const std::shared_ptr<game::BindingContext> &bindings);
 
 	/**
-	 * bind a specific event
-	 * this is the second matching priority
+	 * Set the associated context for binding input events to camera actions.
+	 *
+	 * @param bindings Binding context for camera actions.
 	 */
-	void bind(const Event &ev, const action_func_t act);
+	void set_camera_bindings(const std::shared_ptr<camera::BindingContext> &bindings);
 
 	/**
-	 * bind all events of a specific class
-	 * this is the lowest matching priority
+	 * Set the associated context for binding input events to HUD actions.
+	 *
+	 * @param bindings Binding context for HUD actions.
 	 */
-	void bind(event_class ec, const action_check_t act);
+	void set_hud_bindings(const std::shared_ptr<hud::BindingContext> &bindings);
 
 	/**
-	 * lookup an action. If it is bound, execute it.
-	 * @return true when the action is executed, false else.
+	 * Get the associated context for binding input events to game events.
+	 *
+	 * @return Binding context of the input context.
 	 */
-	bool execute_if_bound(const action_arg_t &e);
+	const std::shared_ptr<game::BindingContext> &get_game_bindings();
 
 	/**
-	 * Called by the InputManager where this context
-	 * shall be registered to.
+	 * Get the associated context for binding input events to camera actions.
+	 *
+	 * @return Binding context of the input context.
 	 */
-	void register_to(InputManager *manager);
+	const std::shared_ptr<camera::BindingContext> &get_camera_bindings();
 
 	/**
-	 * Remove the registration to an input manager.
+	 * Get the associated context for binding input events to HUD actions.
+	 *
+	 * @return Binding context of the input context.
 	 */
-	void unregister();
-
+	const std::shared_ptr<hud::BindingContext> &get_hud_bindings();
 
 	/**
-	 * Affects which keyboard events are received:
-	 * true to accpet utf8 text events,
-	 * false to receive regular char events
+	 * Bind a specific key combination to a single action.
+	 *
+	 * This is the first matching priority.
+	 *
+	 * @param ev Input event triggering the action.
+	 * @param act Action executed by the event.
 	 */
-	bool utf8_mode;
+	void bind(const Event &ev, const input_action act);
+
+	/**
+	 * Bind an event class to a single action.
+	 *
+	 * This is the second matching priority.
+	 *
+	 * @param ev Input event triggering the action.
+	 * @param act Action executed by the event.
+	 */
+	void bind(const event_class &cl, const input_action act);
+
+	/**
+	 * Bind a specific key combination to a list of actions.
+	 *
+	 * This is the first matching priority.
+	 *
+	 * @param ev Input event triggering the action.
+	 * @param act Actions executed by the event.
+	 */
+	void bind(const Event &ev, const std::vector<input_action> &&acts);
+
+	/**
+	 * Bind an event class to a list of actions.
+	 *
+	 * This is the second matching priority.
+	 *
+	 * @param ev Input event triggering the action.
+	 * @param act Actions executed by the event.
+	 */
+	void bind(const event_class &cl, const std::vector<input_action> &&acts);
+
+	/**
+	 * Check whether a specific key event is bound in this context.
+	 *
+	 * @param ev Input event.
+	 *
+	 * @return true if event is bound, else false.
+	 */
+	bool is_bound(const Event &ev) const;
+
+	/**
+	 * Get the action(s) bound to the given event.
+	 *
+	 * @param ev Input event triggering the action.
+	 */
+	const std::vector<input_action> &lookup(const Event &ev) const;
+
+	/**
+	 * Get all event->action bindings in this context.
+	 *
+	 * @return Events bound in this context.
+	 */
+	std::vector<Event> get_event_binds() const;
+
+	/**
+	 * Get all class->action bindings in this context.
+	 *
+	 * @return Event classes bound in this context.
+	 */
+	std::vector<event_class> get_class_binds() const;
+
 
 private:
+	/**
+	 * Unique ID of the context.
+	 */
+	std::string id;
 
 	/**
-	 * Input manager this context is bound to.
+	 * Maps specific input events to actions.
 	 */
-	InputManager *input_manager;
+	std::unordered_map<Event, std::vector<input_action>, event_hash> by_event;
 
 	/**
-	 * Maps an action id to a event execution function.
+	 * Maps event classes to actions.
 	 */
-	std::unordered_map<action_t, action_func_t> by_type;
+	std::unordered_map<event_class, std::vector<input_action>, event_class_hash> by_class;
 
 	/**
-	 * map specific overriding events
+	 * Additional context for game simulation events.
 	 */
-	std::unordered_map<Event, action_func_t, event_hash> by_event;
+	std::shared_ptr<game::BindingContext> game_bindings;
 
 	/**
-	 * event to action map
-	 * event_class as key, to ensure all events can be mapped
+	 * Additional context for camera actions.
 	 */
-	std::unordered_map<event_class, action_check_t, event_class_hash> by_class;
+	std::shared_ptr<camera::BindingContext> camera_bindings;
 
+	/**
+	 * Additional context for HUD actions.
+	 */
+	std::shared_ptr<hud::BindingContext> hud_bindings;
 };
 
-}} // openage::input
+} // namespace openage::input

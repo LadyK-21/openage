@@ -2,6 +2,14 @@
 
 This document describes the code architecture of the openage converter module.
 
+1. [Design Principles](#design-principles)
+   1. [Value Object](#value-object)
+   2. [Entity Object](#entity-object)
+   3. [Service](#service)
+   4. [Processor](#processor)
+   5. [Tool](#tool)
+
+
 ## Design Principles
 
 Our converter uses hierarchical multi-layered object-oriented code principles similar to those found in
@@ -22,7 +30,7 @@ Value objects are used to store primitive data or as definition of how to read p
 In the converter, the parsers utilize these objects to extract attributes from the original Genie Engine
 file formats. Extracted attributes are also saved as value objects.
 
-Value objects are treated as *immutable*. Operations on the objects's values will therefore always return
+Value objects are treated as *immutable*. Operations on the objects values will therefore always return
 a new object instance with the result and leave the original values as-is.
 
 ### Entity Object

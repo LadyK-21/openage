@@ -1,4 +1,4 @@
-# Copyright 2019-2022 the openage authors. See copying.md for legal info.
+# Copyright 2019-2023 the openage authors. See copying.md for legal info.
 #
 # pylint: disable=too-many-lines,too-many-public-methods,too-many-instance-attributes,consider-iterating-dictionary
 
@@ -182,6 +182,9 @@ class GenieGameEntityGroup(ConverterObjectGroup):
 
         elif isinstance(self, GenieBuildingLineGroup):
             line = self.data.unit_lines[line_id]
+
+        else:
+            raise ValueError(f"Unknown creatable line ID {line_id} for {repr(self)}")
 
         return line in self.creates
 
@@ -476,6 +479,8 @@ class GenieGameEntityGroup(ConverterObjectGroup):
             else:
                 # AoE1
                 return False
+        else:
+            raise ValueError(f"Unknown group type for {repr(self)}")
 
         enabling_research_id = head_unit_connection["enabling_research"].value
 
@@ -1115,7 +1120,7 @@ class GenieVillagerGroup(GenieUnitLineGroup):
     variants of the common villager game entity.
     """
 
-    __slots__ = ('data', 'variants', 'creates')
+    __slots__ = ('variants', )
 
     valid_switch_tasks_lookup = {
         5: "GATHER",    # Gather from resource spots

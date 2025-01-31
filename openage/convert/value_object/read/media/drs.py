@@ -1,4 +1,4 @@
-# Copyright 2013-2022 the openage authors. See copying.md for legal info.
+# Copyright 2013-2024 the openage authors. See copying.md for legal info.
 
 """
 Code for reading Genie .DRS archives.
@@ -12,7 +12,7 @@ import typing
 
 from .....log import spam, dbg
 from .....util.filelike.stream import StreamFragment
-from .....util.fslike.filecollection import FileCollection
+from .....util.fslike.filecollection import FileCollection, FileEntry
 from .....util.strings import decode_until_null
 from .....util.struct import NamedStruct
 
@@ -22,6 +22,7 @@ if typing.TYPE_CHECKING:
 
 
 # version of the drs files, hardcoded for now
+COPYRIGHT_ENSEMBLE = b"Copyright (c) 1997 Ensemble Studios"
 COPYRIGHT_SIZE_ENSEMBLE = 40
 COPYRIGHT_SIZE_LUCAS = 60
 
@@ -86,6 +87,23 @@ class DRSFileInfo(NamedStruct):
     file_size        = "i"
 
 
+class DRSEntry(FileEntry):
+    """
+    Entry in a DRS archive.
+    """
+
+    def __init__(self, fileobj: GuardedFile, offset: int, size: int):
+        self.fileobj = fileobj
+        self.offset = offset
+        self.entry_size = size
+
+    def open_r(self):
+        return StreamFragment(self.fileobj, self.offset, self.entry_size)
+
+    def size(self) -> int:
+        return self.entry_size
+
+
 class DRS(FileCollection):
     """
     represents a file archive in DRS format.
@@ -102,7 +120,13 @@ class DRS(FileCollection):
             header = DRSHeaderLucasArts.read(fileobj)
 
         else:
+            # Try Ensemble header by default
             header = DRSHeaderEnsemble.read(fileobj)
+
+            if not header.copyright.startswith(COPYRIGHT_ENSEMBLE):
+                # different copyright string probably means it's SWGB
+                fileobj.seek(0)
+                header = DRSHeaderLucasArts.read(fileobj)
 
         header.copyright = decode_until_null(header.copyright).strip()
         header.version = decode_until_null(header.version)
@@ -112,7 +136,7 @@ class DRS(FileCollection):
         dbg(header)
 
         # read table info
-        self.tables: list[tuple[str, int, int]] = []
+        self.tables: list[DRSTableInfo] = []
         for _ in range(header.table_count):
             table_header = DRSTableInfo.read(fileobj)
 
@@ -126,14 +150,9 @@ class DRS(FileCollection):
             self.tables.append(table_header)
 
         for filename, offset, size in self.read_tables():
-            def open_r(offset=offset, size=size):
-                """ Returns a opened ('rb') file-like object for fileobj. """
-                return StreamFragment(self.fileobj, offset, size)
+            file_entry = DRSEntry(self.fileobj, offset, size)
 
-            self.add_fileentry(
-                [filename.encode()],
-                (open_r, None, lambda size=size: size, None)
-            )
+            self.add_fileentry([filename.encode()], file_entry)
 
     def read_tables(self) -> typing.Generator[tuple[str, str, str], None, None]:
         """

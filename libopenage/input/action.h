@@ -1,99 +1,47 @@
-// Copyright 2015-2018 the openage authors. See copying.md for legal info.
+// Copyright 2015-2023 the openage authors. See copying.md for legal info.
 
 #pragma once
 
 #include <functional>
 #include <unordered_map>
-#include <vector>
 
-#include "../coord/pixel.h"
-#include "event.h"
+#include "input/event.h"
 
-namespace openage {
+namespace openage::input {
 
-class Engine;
+using action_flags_t = std::unordered_map<std::string, std::string>;
+using action_func_t = std::function<void(const event_arguments &args)>;
 
-namespace cvar {
-class CVarManager;
-} // cvar
-
-namespace input {
-
-class InputManager;
 
 /**
- * Used to identify actions.
+ * Action types.
+ *
+ * All action types (except \p input_action_t::CUSTOM) have a default
+ * action.
  */
-using action_t = unsigned int;
+enum class input_action_t {
+	PUSH_CONTEXT,
+	POP_CONTEXT,
+	REMOVE_CONTEXT,
+	GAME,
+	CAMERA,
+	HUD,
+	GUI,
+	CUSTOM,
+};
 
-
-// TODO this whole class seems rather obsolete...
-//      remove it and instead provide a proper class for action_t?
 /**
- * The action manager manages all the actions allow creation, access
- * information and equality.
+ * Action taken by the input manager when receiving an input.
+ *
+ * @param action_type Action type. May determine a default action if \p action is not defined.
+ * @param action Executes custom code for the action based on the received event (optional).
+ * @param flags Additional parameters for the (default) action.
  */
-class ActionManager {
-public:
-	ActionManager(InputManager *input_manager,
-	              cvar::CVarManager *cvar_manager);
-
-public:
-	action_t get(const std::string &type);
-	std::string get_name(const action_t action);
-	bool is(const std::string &type, const action_t action);
-
-private:
-	bool create(const std::string& type);
-
-	// mapping from action name to numbers
-	std::unordered_map<std::string, action_t> actions;
-	// for high-speed reverse lookups (action number -> name)
-	std::unordered_map<action_t, std::string> reverse_map;
-
-	InputManager *const input_manager;
-	cvar::CVarManager *const cvar_manager;
-
-	// the id of the next action that is added via create().
-	action_t next_action_id = 0;
+struct input_action {
+	const input_action_t action_type;
+	const std::optional<action_func_t> action = std::nullopt;
+	const action_flags_t flags = {};
 };
 
 
-// TODO: use action_hint_t = std::pair<action_t, int>
-// for example a building command
-// std::make_pair(action_t::BUILD, 123)
-using action_id_t = action_t;
-
-
-/**
- * Contains information about a triggered event.
- */
-struct action_arg_t {
-
-	// Triggering event
-	const Event e;
-
-	// Mouse position
-	const coord::input mouse;
-	const coord::input_delta motion;
-
-	// hints for arg receiver
-	// these get set globally in input manager
-	std::vector<action_id_t> hints;
-};
-
-
-/**
- * Performs the effect of an action.
- */
-using action_func_t = std::function<void(const action_arg_t &)>;
-
-
-/**
- * For receivers of sets of events a bool is returned
- * to indicate if the event was used.
- */
-using action_check_t = std::function<bool(const action_arg_t &)>;
-
-
-}} // openage::input
+} // namespace openage::input

@@ -1,4 +1,6 @@
-# Copyright 2015-2022 the openage authors. See copying.md for legal info.
+# Copyright 2015-2024 the openage authors. See copying.md for legal info.
+#
+# pylint: disable=too-many-return-statements
 
 """
 Receives cleaned-up srcdir and targetdir objects from .main, and drives the
@@ -6,14 +8,14 @@ actual conversion process.
 """
 from __future__ import annotations
 import typing
+import timeit
 
 
 from ...log import info, dbg
 from ..processor.export.modpack_exporter import ModpackExporter
 from ..service.debug_info import debug_gamedata_format
-from ..service.debug_info import debug_string_resources,\
-    debug_registered_graphics, debug_modpack
-from ..service.init.changelog import (ASSET_VERSION)
+from ..service.debug_info import debug_string_resources, \
+    debug_registered_graphics, debug_modpack, debug_execution_time
 from ..service.read.gamedata import get_gamespec
 from ..service.read.palette import get_palettes
 from ..service.read.register_media import get_existing_graphics
@@ -25,27 +27,20 @@ if typing.TYPE_CHECKING:
     from openage.convert.value_object.init.game_version import GameVersion
 
 
-def convert(args: Namespace) -> typing.Generator[str, None, None]:
+def convert(args: Namespace) -> None:
     """
     args must hold srcdir and targetdir (FS-like objects),
     plus any additional configuration options.
-
-    Yields progress information in the form of:
-        strings (filenames) that indicate the currently-converted object
-        ints that predict the amount of objects remaining
     """
-    # data conversion
-    yield from convert_metadata(args)
+    convert_metadata(args)
     # with args.targetdir[GAMESPEC_VERSION_FILENAME].open('w') as fil:
     #     fil.write(EmpiresDat.get_hash(args.game_version))
 
     # clean args (set by convert_metadata for convert_media)
     del args.palettes
 
-    info(f"asset conversion complete; asset version: {ASSET_VERSION}", )
 
-
-def convert_metadata(args: Namespace) -> typing.Generator[str, None, None]:
+def convert_metadata(args: Namespace) -> None:
     """
     Converts the metadata part.
     """
@@ -53,8 +48,9 @@ def convert_metadata(args: Namespace) -> typing.Generator[str, None, None]:
         info("converting metadata")
         # data_formatter = DataFormatter()
 
+    args.converter = get_converter(args.game_version)
+
     # required for player palette and color lookup during SLP conversion.
-    yield "palette"
     palettes = get_palettes(args.srcdir, args.game_version)
 
     # store for use by convert_media
@@ -67,10 +63,11 @@ def convert_metadata(args: Namespace) -> typing.Generator[str, None, None]:
     if gamedata_path.exists():
         gamedata_path.removerecursive()
 
-    args.converter = get_converter(args.game_version)
+    # Record time taken for each stage
+    stages_time = {}
 
     # Read .dat
-    yield "empires.dat"
+    stage_start = timeit.default_timer()
     debug_gamedata_format(args.debugdir, args.debug_info, args.game_version)
     gamespec = get_gamespec(args.srcdir, args.game_version, not args.flag("no_pickle_cache"))
 
@@ -89,25 +86,49 @@ def convert_metadata(args: Namespace) -> typing.Generator[str, None, None]:
     existing_graphics = get_existing_graphics(args)
     debug_registered_graphics(args.debugdir, args.debug_info, existing_graphics)
 
-    # Convert
+    stage_end = timeit.default_timer()
+    info("Finished metadata read (%.2f seconds)", stage_end - stage_start)
+    stages_time.update({"read": stage_end - stage_start})
+
+    # nyan conversion
+    stage_start = timeit.default_timer()
     modpacks = args.converter.convert(gamespec,
                                       args,
                                       string_resources,
                                       existing_graphics)
 
+    stage_end = timeit.default_timer()
+    info("Finished data conversion (%.2f seconds)", stage_end - stage_start)
+    stages_time.update({"convert": stage_end - stage_start})
+
+    # Export modpacks
+    stage_start = timeit.default_timer()
     for modpack in modpacks:
+        mod_export_start = timeit.default_timer()
         ModpackExporter.export(modpack, args)
         debug_modpack(args.debugdir, args.debug_info, modpack)
 
-    yield "player color palette"
+        mod_export_end = timeit.default_timer()
+        info("Finished export of modpack '%s' v%s (%.2f seconds)",
+             modpack.info.packagename,
+             modpack.info.version,
+             mod_export_end - mod_export_start)
+
+    stage_end = timeit.default_timer()
+    info("Finished export (%.2f seconds)", stage_end - stage_start)
+    stages_time.update({"export": stage_end - stage_start})
+
+    debug_execution_time(args.debugdir, args.debug_info, stages_time)
+
+    # TODO: player palettes
     # player_palette = PlayerColorTable(palette)
     # data_formatter.add_data(player_palette.dump("player_palette"))
 
-    yield "terminal color palette"
+    # TODO: terminal color files
     # termcolortable = ColorTable(URXVTCOLS)
     # data_formatter.add_data(termcolortable.dump("termcolors"))
 
-    yield "game specification files"
+    # TODO: gamespec files
     # data_formatter.export(args.targetdir, ("csv",))
 
     if args.flag('gen_extra_files'):
@@ -139,6 +160,13 @@ def get_converter(game_version: GameVersion):
         from ..processor.conversion.aoc.processor import AoCProcessor
         return AoCProcessor
 
+    if game_edition.game_id == "AOCDEMO":
+        # treat the demo as AoC during conversion
+        # TODO: maybe introduce a config parameter for this purpose?
+        game_edition.game_id = "AOC"
+        from ..processor.conversion.aoc_demo.processor import DemoProcessor
+        return DemoProcessor
+
     if game_edition.game_id == "HDEDITION":
         from ..processor.conversion.hd.processor import HDProcessor
         return HDProcessor
@@ -152,4 +180,4 @@ def get_converter(game_version: GameVersion):
             from ..processor.conversion.swgbcc.processor import SWGBCCProcessor
             return SWGBCCProcessor
 
-    raise Exception(f"no valid converter found for game edition {game_edition.edition_name}")
+    raise RuntimeError(f"no valid converter found for game edition {game_edition.edition_name}")

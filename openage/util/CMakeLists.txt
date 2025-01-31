@@ -3,6 +3,7 @@ add_py_modules(
 	bytequeue.py
 	context.py
 	decorators.py
+	dll.py
 	files.py
 	fsprinting.py
 	hash.py
@@ -15,6 +16,7 @@ add_py_modules(
 	struct.py
 	system.py
 	threading.py
+	version.py
 )
 
 add_subdirectory(filelike)

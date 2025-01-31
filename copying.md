@@ -141,6 +141,25 @@ _the openage authors_ are:
 | Damien Lejay                | dlejay                      | lejay à paracompact dawt space                    |
 | Talha Aamir                 | sarcxd                      | sarcxd à gmail dawt com                           |
 | Matthias Geiger             | CountOmega                  | matthias dawt geiger1024 à outlook dawt com       |
+| Yuvraj Tetarwal             | YuviTz1                     | yuvi56789 à gmail dawt com                        |
+| Tarun Samanta               | TS                          | tarunsamanta77 à gmail dawt com                   |
+| Derek Frogget               | FoggyLight                  | fro22003 à byui dawt edu                          |
+| Martin                      | Starman                     | mstarman à seznam dawt cz                         |
+| Zoltán Ács                  | zoli111                     | acszoltan111 à gmail dawt com                     |
+| Trevor Slocum               | tslocum                     | trevor à rocket9labs dawt com                     |
+| Munawar Hafiz               | munahaf                     | munawar dawt hafiz à gmail dawt com               |
+| Md Ashhar                   | ashhar                      | mdashhar01 à gmail dawt com                       |
+| Fábio Barkoski              | fabiobarkoski               | fabiobarkoskii à gmail dawt com                   |
+| Astitva Kamble              | askastitva                  | astitvakamble5 à gmail dawt com                   |
+| Haoyang Bi                  | AyiStar                     | ayistar à outlook dawt com                        |
+| Michael Seibt               | RoboSchmied                 | github à roboschmie dawt de                       |
+| Nikhil Ghosh                | NikhilGhosh75               | nghosh606 à gmail dawt com                        |
+| Edvin Lindholm              | EdvinLndh                   | edvinlndh à gmail dawt com                        |
+| Jeremiah Morgan             | jere8184                    | jeremiahmorgan dawt bham à outlook dawt com       |
+| Tobias Alam                 | alamt22                     | tobiasal à umich dawt edu                         |
+| Alex Zhuohao He             | ZzzhHe                      | zhuohao dawt he à outlook dawt com                |
+| David Wever                 | dmwever                     | dmwever à crimson dawt ua dawt edu                |
+| Michael Lynch               | mtlynch                     | git à mtlynch dawt io                             |
 
 If you're a first-time committer, add yourself to the above list. This is not
 just for legal reasons, but also to keep an overview of all those nicknames.

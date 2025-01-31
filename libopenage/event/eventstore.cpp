@@ -1,19 +1,20 @@
-// Copyright 2018-2018 the openage authors. See copying.md for legal info.
+// Copyright 2018-2024 the openage authors. See copying.md for legal info.
 
 #include "eventstore.h"
 
 #include <algorithm>
+#include <iterator>
+#include <utility>
 
-#include "event.h"
+#include "log/message.h"
 
-#include "../util/compiler.h"
-#include "../error/error.h"
+#include "error/error.h"
 
 
 namespace openage::event {
 
 void EventStore::push(const std::shared_ptr<Event> &event) {
-	if (unlikely(event == nullptr)) {
+	if (event == nullptr) [[unlikely]] {
 		throw Error{ERR << "inserting nullptr event to queue"};
 	}
 
@@ -39,8 +40,8 @@ std::shared_ptr<Event> EventStore::pop() {
 		throw Error{ERR << "inconsistent: prev_heap=" << heap_s
 		                << " prev_map=" << evnt_s};
 	}
-		//ENSURE(this->heap.size() == this->events.size(),
-		//   "heap and event set are inconsistent 1");
+	//ENSURE(this->heap.size() == this->events.size(),
+	//   "heap and event set are inconsistent 1");
 
 	return event;
 }
@@ -55,7 +56,7 @@ bool EventStore::erase(const std::shared_ptr<Event> &event) {
 	bool erased = false;
 	auto it = this->events.find(event);
 	if (it != std::end(this->events)) {
-		this->heap.unlink_node(it->second);
+		this->heap.remove_node(it->second);
 		this->events.erase(it);
 		erased = true;
 	}
@@ -66,7 +67,7 @@ bool EventStore::erase(const std::shared_ptr<Event> &event) {
 
 void EventStore::update(const std::shared_ptr<Event> &event) {
 	auto it = this->events.find(event);
-	if (unlikely(it != std::end(this->events))) {
+	if (it != std::end(this->events)) [[unlikely]] {
 		this->heap.update(it->second);
 	}
 	else {
@@ -107,18 +108,16 @@ std::vector<std::shared_ptr<Event>> EventStore::get_sorted_events() const {
 		std::back_inserter(ret),
 		[](const auto &elem) {
 			return elem.first;
-		}
-	);
+		});
 
 	std::sort(
 		std::begin(ret),
 		std::end(ret),
 		[](const auto &a, const auto &b) {
 			return *a < *b;
-		}
-	);
+		});
 
 	return ret;
 }
 
-} // openage::event
+} // namespace openage::event

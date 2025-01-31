@@ -1,4 +1,4 @@
-# Copyright 2020-2022 the openage authors. See copying.md for legal info.
+# Copyright 2020-2023 the openage authors. See copying.md for legal info.
 #
 # pylint: disable=too-many-branches,too-many-statements,too-many-locals
 #
@@ -14,7 +14,7 @@ import typing
 
 from math import degrees
 
-from ....entity_object.conversion.aoc.genie_unit import GenieBuildingLineGroup,\
+from ....entity_object.conversion.aoc.genie_unit import GenieBuildingLineGroup, \
     GenieVillagerGroup, GenieUnitLineGroup
 from ....entity_object.conversion.converter_object import RawAPIObject
 from ....service.conversion import internal_name_lookups
@@ -176,7 +176,7 @@ class RoRAbilitySubprocessor:
                     AoCAbilitySubprocessor.create_civ_animation(line,
                                                                 civ_group,
                                                                 civ_animation_id,
-                                                                ability_ref,
+                                                                f"{ability_ref}.Animated",
                                                                 obj_prefix,
                                                                 filename_prefix,
                                                                 obj_exists)
@@ -537,7 +537,7 @@ class RoRAbilitySubprocessor:
             projectile_id = current_unit["projectile_id0"].value
 
         else:
-            raise Exception("Invalid position")
+            raise ValueError(f"Invalid projectile position {position}")
 
         projectile = dataset.genie_units[projectile_id]
         arc = degrees(projectile["projectile_arc"].value)

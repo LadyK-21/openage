@@ -1,17 +1,22 @@
 add_sources(libopenage
 	buffer.cpp
 	context.cpp
+	debug.cpp
+	error.cpp
 	framebuffer.cpp
 	geometry.cpp
 	render_pass.cpp
 	render_target.cpp
 	renderer.cpp
 	shader.cpp
+    shader_data.cpp
 	shader_program.cpp
 	simple_object.cpp
 	texture.cpp
 	texture_array.cpp
+    uniform_buffer.cpp
 	uniform_input.cpp
+	util.cpp
 	vertex_array.cpp
 	window.cpp
 )

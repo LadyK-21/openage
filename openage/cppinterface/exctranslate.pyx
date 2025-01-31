@@ -1,4 +1,4 @@
-# Copyright 2015-2017 the openage authors. See copying.md for legal info.
+# Copyright 2015-2024 the openage authors. See copying.md for legal info.
 
 """
 Provides the raise_py_exception and describe_py_exception callbacks for
@@ -10,21 +10,14 @@ from cpython.exc cimport (
     PyErr_Occurred,
     PyErr_Fetch,
     PyErr_NormalizeException,
-    PyErr_SetObject,
-    PyErr_Restore
-)
-from cpython.pystate cimport (
-    PyThreadState,
-    PyThreadState_Get
+    PyErr_SetObject
 )
 
-from libcpp.string cimport string
 from libcpp cimport bool as cppbool
 
-from libopenage.log.level cimport level, err as lvl_err
 from libopenage.log.message cimport message
 from libopenage.error.error cimport Error
-from libopenage.error.backtrace cimport Backtrace, backtrace_symbol
+from libopenage.error.backtrace cimport backtrace_symbol
 from libopenage.pyinterface.functional cimport Func1
 from libopenage.pyinterface.pyexception cimport (
     PyException,
@@ -36,64 +29,29 @@ from libopenage.pyinterface.exctranslate cimport (
     set_exc_translation_funcs
 )
 
-import importlib
 from ..testing.testing import TestError
-from ..log import err, info
+from ..log import info
 
 cdef extern from "Python.h":
-    cdef cppclass PyCodeObject:
-        pass
     int PyException_SetTraceback(PyObject *ex, PyObject *tb)
-    PyCodeObject *PyCode_NewEmpty(const char *filename, const char *funcname, int firstlineno)
+
+# _PyTraceback_Add has been made private in Python 3.13
+# see https://github.com/python/cpython/pull/108453
+# TODO: Find another solution to add tracebacks
+# cdef extern from "traceback.h":
+#     void _PyTraceback_Add(const char *funcname, const char *filename, int lineno)
 
 
-cdef extern from "frameobject.h":
-    cdef cppclass PyFrameObject:
-        int f_lineno
-    PyFrameObject *PyFrame_New(PyThreadState *, PyCodeObject *, PyObject *, PyObject *)
+cdef void PyTraceback_Add(const char *functionname, const char *filename, int lineno) noexcept with gil:
+    """
+    Add a new traceback stack frame.
 
+    Note: Currently does nothing, because _PyTraceback_Add is no longer
+          accessible since Python 3.13.
 
-cdef extern from "Python.h":
-    int PyTraceBack_Here(PyFrameObject *)
-
-
-
-cdef void PyTraceback_Add(const char *functionname, const char *filename, int lineno) with gil:
-    """ This function is identical to Python 3.4.3's _PyTraceback_Add. """
-    # TODO remove once we update our minimum Python requirement to 3.4.3 or higher.
-    # note that there's a slight difference in the function prototype:
-    # Python 3.4.3's PyTraceback_Add has non-const functionname and filename,
-    # though it doesn't actually use them in a non-const way.
-    # see http://bugs.python.org/issue24436.
-    cdef PyObject *exc_type = NULL
-    cdef PyObject *exc_value = NULL
-    cdef PyObject *exc_tb = NULL
-
-    # save and clear the current exception.
-    # Python functions must not be called with an exception set.
-    # Calling Python functions happens when the codec of the filesystem
-    # encoding is implemented in pure Python.
-    PyErr_Fetch(&exc_type, &exc_value, &exc_tb)
-
-    cdef PyCodeObject *code = PyCode_NewEmpty(filename, functionname, lineno)
-    if code == NULL:
-        PyErr_Restore(exc_type, exc_value, exc_tb)
-        return
-
-    globals_ = dict()
-    cdef PyFrameObject *frame = PyFrame_New(PyThreadState_Get(), code, <PyObject *> globals_, NULL)
-    if frame == NULL:
-        Py_XDECREF(<PyObject *> code)
-        PyErr_Restore(exc_type, exc_value, exc_tb)
-        return
-
-    frame.f_lineno = lineno
-
-    PyErr_Restore(exc_type, exc_value, exc_tb)
-    PyTraceBack_Here(frame)
-
-    Py_XDECREF(<PyObject *> code)
-    Py_XDECREF(<PyObject *> frame)
+    TODO: Find another solution to add tracebacks.
+    """
+    # _PyTraceback_Add(functionname, filename, lineno)
 
 
 cdef class CPPMessageObject:
@@ -109,7 +67,7 @@ class CPPException(Exception):
         self.typename = typename
 
 
-cdef void py_add_backtrace_frame_from_symbol(const backtrace_symbol *symbol) with gil:  # noexcept
+cdef void py_add_backtrace_frame_from_symbol(const backtrace_symbol *symbol) noexcept with gil:
     """
     For use as a callback with Error->backtrace->get_symbols(), from within
     raise_exception.
@@ -125,7 +83,7 @@ cdef Func1[void, const backtrace_symbol *] py_backtrace_adder
 py_backtrace_adder.bind_noexcept0(py_add_backtrace_frame_from_symbol)
 
 
-cdef void raise_cpp_error_common(Error *cpp_error_obj, object obj_to_raise):
+cdef void raise_cpp_error_common(Error *cpp_error_obj, object obj_to_raise) noexcept:
     """
     Common code that is used by both raise_cpp_error and raise_cpp_pyexception.
 
@@ -205,7 +163,7 @@ cdef void raise_cpp_pyexception(PyException *cpp_pyexception_obj) except * with 
     # No new data was added during its C++ life.
 
 
-cdef cppbool check_exception() with gil:
+cdef cppbool check_exception() noexcept with gil:
     # see the doc of the function pointer in exctranslate.h
     return (PyErr_Occurred() != NULL)
 

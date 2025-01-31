@@ -1,4 +1,4 @@
-# Copyright 2020-2022 the openage authors. See copying.md for legal info.
+# Copyright 2020-2024 the openage authors. See copying.md for legal info.
 #
 # pylint: disable=too-many-locals,too-many-statements
 #
@@ -13,7 +13,7 @@ from __future__ import annotations
 import typing
 
 from .....nyan.nyan_structs import MemberSpecialValue
-from ....entity_object.conversion.converter_object import ConverterObjectGroup,\
+from ....entity_object.conversion.converter_object import ConverterObjectGroup, \
     RawAPIObject
 from ....entity_object.conversion.swgbcc.genie_unit import SWGBUnitTransformGroup
 from ....service.conversion import internal_name_lookups
@@ -37,6 +37,7 @@ class SWGBCCPregenSubprocessor:
         # Stores pregenerated raw API objects as a container
         pregen_converter_group = ConverterObjectGroup("pregen")
 
+        AoCPregenSubprocessor.generate_activities(full_data_set, pregen_converter_group)
         AoCPregenSubprocessor.generate_attributes(full_data_set, pregen_converter_group)
         AoCPregenSubprocessor.generate_diplomatic_stances(full_data_set, pregen_converter_group)
         AoCPregenSubprocessor.generate_team_property(full_data_set, pregen_converter_group)
@@ -48,6 +49,7 @@ class SWGBCCPregenSubprocessor:
         AoCPregenSubprocessor.generate_misc_effect_objects(full_data_set, pregen_converter_group)
         # cls._generate_modifiers(gamedata, pregen_converter_group) ??
         # cls._generate_terrain_types(gamedata, pregen_converter_group) TODO: Create terrain types
+        AoCPregenSubprocessor.generate_path_types(full_data_set, pregen_converter_group)
         cls.generate_resources(full_data_set, pregen_converter_group)
         AoCPregenSubprocessor.generate_death_condition(full_data_set, pregen_converter_group)
 
@@ -61,8 +63,8 @@ class SWGBCCPregenSubprocessor:
             pregen_object.create_nyan_members()
 
             if not pregen_object.is_ready():
-                raise Exception(f"{repr(pregen_object)}: Pregenerated object is not ready "
-                                "for export. Member or object not initialized.")
+                raise RuntimeError(f"{repr(pregen_object)}: Pregenerated object is not ready "
+                                   "for export. Member or object not initialized.")
 
     @staticmethod
     def generate_effect_types(

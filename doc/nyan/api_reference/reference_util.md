@@ -30,6 +30,176 @@ Game entities types for which the accuracy value can be used.
 **blacklisted_entities**
 Blacklists game entities that have one of the types listed in `target_types`, but should not be covered by this `Accuracy` object.
 
+## util.activity.Activity
+
+```python
+Activity(Object):
+    start : Start
+```
+
+Stores a node graph for the behaviour of a game entity. Activities are assigned to game entities with the `Activity` ability.
+
+**start**
+Starting node of the activity.
+
+## util.activity.condition.Condition
+
+```python
+Condition(Object):
+    node : Node
+```
+
+Generalization object for conditions that can be used in `XORGate` nodes.
+
+**node**
+Node that is visited when the condition is true.
+
+## util.activity.condition.type.CommandInQueue
+
+```python
+CommandInQueue(Condition):
+    pass
+```
+
+Is true when the command queue is not empty when the node is visited.
+
+## util.activity.condition.type.NextCommandIdle
+
+```python
+NextCommandIdle(Condition):
+    pass
+```
+
+Is true when the next command in the queue is of type `Idle`.
+
+## util.activity.condition.type.NextCommandMove
+
+```python
+NextCommandMove(Condition):
+    pass
+```
+
+Is true when the next command in the queue is of type `Move`.
+
+## util.activity.event.Event
+
+```python
+Event(Object):
+    pass
+```
+
+Generalization object for events that can be used in `XOREventGate` nodes.
+
+## util.activity.event.type.CommandInQueue
+
+```python
+CommandInQueue(Event):
+    pass
+```
+
+Fires after a new command has been added to the game entity's command queue.
+
+## util.activity.event.type.Wait
+
+```python
+Wait(Event):
+    time : float
+```
+
+Fires after a certain amount of time has passed.
+
+**time**
+Time in seconds to wait.
+
+If the value is zero or negative, the event fires immediately.
+
+## util.activity.event.type.WaitAbility
+
+```python
+WaitAbility(Event):
+    pass
+```
+
+Fires at the exact time when a previously visited ability node has finished executing.
+
+In other words, the event fires when the ability is done with the associated task. For example, in case of the `Move` ability, the event fires when the game entity has reached its destination.
+
+## util.activity.node.Node
+
+```python
+Node(Object):
+    pass
+```
+
+Generalization object for nodes in an activity graph.
+
+## util.activity.node.type.Ability
+
+```python
+Ability(Node):
+    next    : Node
+    ability : abstract(Ability)
+```
+
+Executes an ability of the game entity when the node is visited.
+
+**next**
+Next node in the activity graph.
+
+**ability**
+Ability that is executed.
+
+This can reference a specific ability of the game entity or an abstract API object from the `engine.ability.type` namespace. If a specific ability is referenced, the ability must be assigned to the game entity and must not be disabled. Otherwise, the ability is not executed. If an API object is referenced, the first active ability with the same type as the API object is executed.
+
+## util.activity.node.type.End
+
+```python
+End(Node):
+    pass
+```
+
+End of an activity. Does nothing.
+
+## util.activity.node.type.Start
+
+```python
+Start(Node):
+    next : Node
+```
+
+Start of an activity. Does nothing but pointing to the next node.
+
+**next**
+Next node in the activity graph.
+
+## util.activity.node.type.XOREventGate
+
+```python
+XOREventGate(Node):
+    next : dict(Event, Node)
+```
+
+Gateway that branches the activity graph when a certain event occurs. Events are registered immediately when the node is visited and cancelled when the node is left.
+
+**next**
+Mapping of events to the next node in the activity graph. The first event that occurs is used to determine the next node.
+
+## util.activity.node.type.XORGate
+
+```python
+XORGate(Node):
+    next    : orderedset(Condition)
+    default : Node
+```
+
+Gateway that branches the activity graph depending on the result of conditional queries. Queries are executed immediately when the node is visited.
+
+**next**
+Mapping of conditional queries to the next node in the activity graph. The first query that evaluates to true is used to determine the next node. If no query evaluates to true, the `default` node is used.
+
+**default**
+Default node that is used if no query evaluates to true.
+
 ## util.animation_override.AnimationOverride
 
 ```python
@@ -1321,43 +1491,6 @@ Patrol(MoveMode):
 
 Lets player set two or more waypoints that the game entity will follow. Stances from `GameEntityStance` ability are considered during movement.
 
-## util.passable_mode.PassableMode
-
-```python
-PassableMode(Object):
-    allowed_types        : set(children(GameEntityType))
-    blacklisted_entities : set(GameEntity)
-```
-
-Generalization object for all passable modes. Define passability options for the `Passable` ability.
-
-**allowed_types**
-Lists the game entities types which can pass the hitbox.
-
-**blacklisted_entities**
-Used to blacklist game entities that have one of the types listed in `allowed_types`, but should not be covered by this `PassableMode` object.
-
-## util.passable_mode.type.Gate
-
-```python
-Gate(PassableMode):
-    stances : set(children(DiplomaticStance))
-```
-
-Lets all compatible game entities from players with the specified stances pass through the hitbox. Game entities of players with other stances can also pass through while any unit is passing through.
-
-**stances**
-Stances of players whose game entities are always allowed to pass though the hitbox.
-
-## util.passable_mode.type.Normal
-
-```python
-Normal(PassableMode):
-    pass
-```
-
-Lets all compatible game entities pass through the hitbox.
-
 ## util.patch.NyanPatch
 
 ```python
@@ -1407,6 +1540,15 @@ The patch is applied to all players that have the specified diplomatic stances.
 
 **stances**
 Diplomatic stances of the players the patch should apply to.
+
+## util.path_type.PathType
+
+```python
+PathType(Object):
+    pass
+```
+
+Path type that is associated with an internal pathfinding grid at runtime.
 
 ## util.payment_mode.PaymentMode
 
@@ -2243,6 +2385,7 @@ Terrain(Object):
     terrain_graphic : Terrain
     sound           : Sound
     ambience        : set(TerrainAmbient)
+    path_costs      : dict(children(PathType), int)
 ```
 
 Terrains define the properties of the ground which the game entities are placed on.
@@ -2261,6 +2404,15 @@ Ambient sound played when the camera of the player is looking onto the terrain.
 
 **ambience**
 Ambient objects placed on the terrain.
+
+**path_costs**
+Base costs of traversing the pathfinding grid on map areas where the terrain is placed.
+
+Keys are `PathType` objects that are associated with a pathfinding grid in the pathfinder.
+
+Values represent the pathing cost for the terrain on the pathfinding grid. Each value must be an integer between `1` and `255`. `1` defines the *minimum* possible cost and `254` represents the *maximum* possible cost. `255` signifies that the terrain is impassable for the specified path type.
+
+For `PathType` objects that exist in the modpack but are not keys in this dict, a default cost value of `1` is assumed.
 
 ## util.terrain.TerrainAmbient
 

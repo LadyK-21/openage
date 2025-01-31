@@ -1,4 +1,4 @@
-// Copyright 2015-2019 the openage authors. See copying.md for legal info.
+// Copyright 2015-2023 the openage authors. See copying.md for legal info.
 
 #pragma once
 
@@ -13,6 +13,7 @@
 namespace openage {
 namespace options {
 
+// TODO: load option values from cvar system.
 
 /**
  * list of possible value types
@@ -35,10 +36,11 @@ using option_list = std::vector<OptionValue>;
 
 /**
  * stores a type and value
+ *
+ * TODO: What is this used for?
  */
 class OptionValue {
 public:
-
 	/**
 	 * value ownership managed by this
 	 */
@@ -70,13 +72,13 @@ public:
 	/**
 	 * Checks equality
 	 */
-	bool operator ==(const OptionValue &other) const;
+	bool operator==(const OptionValue &other) const;
 
 	/**
 	 * Assignment, reference values share their values
 	 * non reference values are copied
 	 */
-	const OptionValue &operator =(const OptionValue &other);
+	const OptionValue &operator=(const OptionValue &other);
 
 	/**
 	 * Value converted to a string
@@ -86,7 +88,7 @@ public:
 	/**
 	 * read inner type - the templated type must match
 	 */
-	template<class T>
+	template <class T>
 	const T &value() const {
 		return var->get<T>();
 	}
@@ -94,13 +96,12 @@ public:
 	const option_type type;
 
 private:
-
 	/**
 	 * set the value
 	 */
 	void set(const OptionValue &other);
 
-	template<class T>
+	template <class T>
 	void set_value(const OptionValue &other) {
 		const T &other_value = other.value<T>();
 		if (this->var) {
@@ -124,7 +125,6 @@ private:
 	 */
 	bool owner;
 	util::VariableBase *var;
-
 };
 
 OptionValue parse(option_type t, const std::string &s);
@@ -151,7 +151,6 @@ public:
 
 private:
 	const opt_func_t function;
-
 };
 
 /**
@@ -161,8 +160,9 @@ private:
  * with console interaction or gui elements
  */
 class OptionNode {
-	template<class T>
+	template <class T>
 	friend class Var;
+
 public:
 	OptionNode(std::string panel_name);
 	virtual ~OptionNode();
@@ -170,7 +170,7 @@ public:
 	/**
 	 * lists all available options in a readable format
 	 */
-	std::vector<std::string> list_options(bool recurse=false, const std::string &indent="");
+	std::vector<std::string> list_options(bool recurse = false, const std::string &indent = "");
 
 	/**
 	 * shows all available variable names
@@ -188,7 +188,7 @@ public:
 	/**
 	 * shortcut for get_variable(name).value<T>()
 	 */
-	template<class T>
+	template <class T>
 	const T &getv(const std::string &name) {
 		return this->get_variable(name).value<T>();
 	}
@@ -216,7 +216,6 @@ public:
 	const std::string name;
 
 protected:
-
 	/**
 	 * add types to the interface
 	 */
@@ -225,7 +224,6 @@ protected:
 	void add_action(const OptionAction &action);
 
 private:
-
 	/**
 	 * add child nodes
 	 */
@@ -263,13 +261,11 @@ private:
  * option node allowing reflection, while also
  * being directly accessable as a typed member
  */
-template<class T>
+template <class T>
 class Var : public util::Variable<T> {
 public:
-	Var(OptionNode *owner, const std::string &name, const T &init)
-		:
+	Var(OptionNode *owner, const std::string &name, const T &init) :
 		util::Variable<T>{init} {
-
 		owner->add(name, this->value);
 	}
 };

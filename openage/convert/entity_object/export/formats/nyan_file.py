@@ -1,4 +1,4 @@
-# Copyright 2019-2022 the openage authors. See copying.md for legal info.
+# Copyright 2019-2023 the openage authors. See copying.md for legal info.
 
 """
 Nyan file struct that stores a bunch of objects and
@@ -15,7 +15,7 @@ if typing.TYPE_CHECKING:
     from openage.nyan.import_tree import ImportTree
 
 
-FILE_VERSION = "0.1.0"
+FILE_VERSION = "0.2.0"
 
 
 class NyanFile(DataDefinition):
@@ -42,16 +42,20 @@ class NyanFile(DataDefinition):
 
         self.import_tree = None
 
-        self.fqon = (self.modpack_name,
-                     *self.targetdir.replace("/", ".")[:-1].split("."),
-                     self.filename.split(".")[0])
+        if len(targetdir) == 0 or targetdir == "/":
+            self.fqon = (self.modpack_name, self.filename.split(".")[0])
+
+        else:
+            self.fqon = (self.modpack_name,
+                         *self.targetdir.replace("/", ".")[:-1].split("."),
+                         self.filename.split(".")[0])
 
     def add_nyan_object(self, new_object: NyanObject) -> None:
         """
         Adds a nyan object to the file.
         """
         if not isinstance(new_object, NyanObject):
-            raise Exception(f"nyan file cannot contain non-nyan object {new_object}")
+            raise TypeError(f"nyan file cannot contain non-nyan object {new_object}")
 
         self.nyan_objects.add(new_object)
 
@@ -62,7 +66,9 @@ class NyanFile(DataDefinition):
         """
         Returns the string that represents the nyan file.
         """
-        fileinfo_str = f"# NYAN FILE\nversion {FILE_VERSION}\n\n"
+        fileinfo_str = "# NYAN FILE\n"
+        fileinfo_str += f"!version {FILE_VERSION}\n\n"
+
         import_str = ""
         objects_str = ""
 
@@ -72,17 +78,32 @@ class NyanFile(DataDefinition):
         # Removes one empty newline at the end of the objects definition
         objects_str = objects_str[:-1]
 
-        import_aliases = self.import_tree.get_import_dict()
+        import_aliases = self.import_tree.get_alias_dict()
+        import_files = self.import_tree.get_import_list()
         self.import_tree.clear_marks()
 
-        for alias, fqon in import_aliases.items():
-            import_str += "import "
+        if len(import_files) > 0:
+            for fqon in import_files:
+                import_str += "import "
 
-            import_str += ".".join(fqon)
+                import_str += ".".join(fqon)
 
-            import_str += f" as {alias}\n"
+                import_str += "\n"
 
-        import_str += "\n"
+            import_str += "\n"
+
+        if len(import_aliases) > 0:
+            for alias, fqon in import_aliases.items():
+                import_str += "import "
+
+                import_str += ".".join(fqon)
+
+                if len(alias) > 0:
+                    import_str += f" as {alias}"
+
+                import_str += "\n"
+
+            import_str += "\n"
 
         output_str = fileinfo_str + import_str + objects_str
 

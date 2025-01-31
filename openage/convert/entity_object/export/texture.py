@@ -1,4 +1,4 @@
-# Copyright 2014-2022 the openage authors. See copying.md for legal info.
+# Copyright 2014-2024 the openage authors. See copying.md for legal info.
 
 """ Routines for texture generation etc """
 
@@ -14,7 +14,6 @@ import numpy
 from ....log import spam
 from ...value_object.read.media.blendomatic import BlendingMode
 from ...value_object.read.media.hardcoded.terrain_tile_size import TILE_HALFSIZE
-from ...value_object.read.genie_structure import GenieStructure
 
 if typing.TYPE_CHECKING:
     from openage.convert.value_object.read.media.colortable import ColorTable
@@ -22,6 +21,7 @@ if typing.TYPE_CHECKING:
     from openage.convert.value_object.read.media.slp import SLP, SLPFrame
     from openage.convert.value_object.read.media.smp import SMP, SMPLayer
     from openage.convert.value_object.read.media.smx import SMX, SMXLayer
+    from openage.convert.value_object.read.media.sld import SLD, SLDLayer
 
 
 class TextureImage:
@@ -64,23 +64,20 @@ class TextureImage:
         return self.data
 
 
-class Texture(GenieStructure):
-    image_format = "png"
+class Texture:
+    """
+    one sprite, as part of a texture atlas.
 
-    name_struct = "subtexture"
-    name_struct_file = "texture"
-    struct_description = (
-        "one sprite, as part of a texture atlas.\n"
-        "\n"
-        "this struct stores information about positions and sizes\n"
-        "of sprites included in the 'big texture'."
-    )
+    stores information about positions and sizes
+    of sprites included in the 'big texture'.
+    """
 
     def __init__(
         self,
-        input_data: typing.Union[SLP, SMP, SMX, BlendingMode],
+        input_data: typing.Union[SLP, SMP, SMX, SLD, BlendingMode],
         palettes: dict[int, ColorTable] = None,
-        custom_cutter: InterfaceCutter = None
+        custom_cutter: InterfaceCutter = None,
+        layer: int = 0
     ):
         super().__init__()
 
@@ -91,17 +88,19 @@ class Texture(GenieStructure):
         self.best_packer_hints: tuple = None
 
         self.image_data: TextureImage = None
-        self.image_metadata: list[dict[str, int]] = None
+        self.image_metadata: list[dict[str, int]] = {}
 
         spam("creating Texture from %s", repr(input_data))
 
         from ...value_object.read.media.slp import SLP
         from ...value_object.read.media.smp import SMP
         from ...value_object.read.media.smx import SMX
+        from ...value_object.read.media.sld import SLD
 
         self.frames = []
         if isinstance(input_data, (SLP, SMP, SMX)):
-            for frame in input_data.main_frames:
+            input_frames = input_data.get_frames(layer)
+            for frame in input_frames:
                 # Palette can be different for every frame
                 palette_number = frame.get_palette_number()
 
@@ -116,6 +115,19 @@ class Texture(GenieStructure):
                                                    custom_cutter):
                     self.frames.append(subtex)
 
+        elif isinstance(input_data, SLD):
+            input_frames = input_data.get_frames(layer)
+            if layer == 0 and len(input_frames) == 0:
+                # Use shadows if no main graphics are inside
+                input_frames = input_data.get_frames(layer=1)
+
+            for frame in input_frames:
+                subtex = TextureImage(
+                    frame.get_picture_data(),
+                    hotspot=frame.get_hotspot()
+                )
+                self.frames.append(subtex)
+
         elif isinstance(input_data, BlendingMode):
             self.frames = [
                 # the hotspot is in the west corner of a tile.
@@ -126,7 +138,7 @@ class Texture(GenieStructure):
                 for tile in input_data.alphamasks
             ]
         else:
-            raise Exception("cannot create Texture "
+            raise TypeError("cannot create Texture "
                             "from unknown source type: %s" % (type(input_data)))
 
     def _to_subtextures(
@@ -163,18 +175,3 @@ class Texture(GenieStructure):
             - PNG compression parameters (compression level + deflate params)
         """
         return self.best_packer_hints, self.best_compr
-
-    @classmethod
-    def get_data_format_members(cls, game_version) -> tuple:
-        """
-        Return the members in this struct.
-        """
-        data_format = (
-            (True, "x", None, "int32_t"),
-            (True, "y", None, "int32_t"),
-            (True, "w", None, "int32_t"),
-            (True, "h", None, "int32_t"),
-            (True, "cx", None, "int32_t"),
-            (True, "cy", None, "int32_t"),
-        )
-        return data_format

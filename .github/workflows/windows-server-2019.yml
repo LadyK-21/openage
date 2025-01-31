@@ -6,7 +6,7 @@ jobs:
   build-x64:
     runs-on: windows-2019
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
         path: source
@@ -15,7 +15,7 @@ jobs:
         vswhere -latest
       shell: pwsh
     - name: Setup Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.9'
         architecture: 'x64'
@@ -24,7 +24,7 @@ jobs:
         mkdir download
         cd download
         $zipfile = "openage-dep-x64-windows.zip"
-        Invoke-WebRequest https://github.com/duanqn/openage-windows-dep/releases/download/v0.0.1-alpha-ba157a25-eigenfix/openage-dep-x64-windows.zip -OutFile $zipfile
+        Invoke-WebRequest https://github.com/SFTtech/openage-dependencies/releases/download/v0.5.1/openage-dep-x64-windows.zip -OutFile $zipfile
         Expand-Archive -Path $zipfile -DestinationPath . -Force
         Remove-Item $zipfile
         (Get-ChildItem . -Recurse -File).FullName
@@ -42,11 +42,11 @@ jobs:
     - name: Install dependencies [Python]
       run: |
         python -m pip install --upgrade pip
-        python -m pip install --upgrade Cython wheel numpy lz4 toml pillow pygments pyreadline3 Jinja2
+        python -m pip install --upgrade Cython wheel numpy lz4 toml pillow pygments pyreadline3 mako
       shell: pwsh
     - name: Build
       run: |
-        $TOOLCHAIN_FILE = Join-Path download merge-x64-windows scripts buildsystems vcpkg.cmake | Resolve-Path
+        $TOOLCHAIN_FILE = Join-Path download openage-dep-x64-windows scripts buildsystems vcpkg.cmake | Resolve-Path
         $FLEX_PATH = (Get-ChildItem ./download -Recurse -Force -Filter 'win_flex.exe')[0].FullName
         mkdir build
         cd build
@@ -76,9 +76,10 @@ jobs:
         $DLL_PATH = Join-Path package dll | Resolve-Path
         cd package
         python -m openage --add-dll-search-path $DLL_PATH --version
+        python -m openage --add-dll-search-path $DLL_PATH test -a
       shell: pwsh
     - name: Publish build artifacts
-      uses: actions/upload-artifact@v2.2.4
+      uses: actions/upload-artifact@v4
       if: ${{ always() }}
       with:
         name: build-files
@@ -86,11 +87,10 @@ jobs:
         if-no-files-found: error
         retention-days: 30
     - name: Publish packaged artifacts
-      uses: actions/upload-artifact@v2.2.4
+      uses: actions/upload-artifact@v4
       if: ${{ always() }}
       with:
         name: package-files
         path: './package'
         if-no-files-found: error
         retention-days: 30
-      

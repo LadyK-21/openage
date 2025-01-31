@@ -1,16 +1,19 @@
-// Copyright 2018-2018 the openage authors. See copying.md for legal info.
+// Copyright 2023-2023 the openage authors. See copying.md for legal info.
 
 #pragma once
 
+#include <cstdint>
 
-namespace openage {
+namespace openage::gamestate {
 
 /**
- * The key type mapped to data objects.
- * Used for graphics indices, sounds, ...
- * TODO: get rid of this.
+ * Game entity IDs.
  */
-using index_t = int;
+using entity_id_t = uint64_t;
 
+/**
+ * Player IDs.
+ */
+using player_id_t = uint64_t;
 
-} // openage
+} // namespace openage::gamestate

@@ -1,10 +1,10 @@
-// Copyright 2017-2018 the openage authors. See copying.md for legal info.
+// Copyright 2017-2023 the openage authors. See copying.md for legal info.
 
 #pragma once
 
-#include <set>
 #include <cstring>
 #include <optional>
+#include <set>
 
 #include <vulkan/vulkan.h>
 
@@ -12,12 +12,13 @@
 
 #include "loader.h"
 
+QT_FORWARD_DECLARE_CLASS(QWindow)
 
 namespace openage {
 namespace renderer {
 namespace vulkan {
 
-struct vlk_capabilities {
+struct vlk_spec {
 	/// Names of available layers.
 	std::set<std::string> layers;
 	/// Names of available extensions.
@@ -28,7 +29,15 @@ struct vlk_capabilities {
 // TODO dirty hack to graft vk functionality onto window.
 // needs better structure (not inheritance! (?)) for proper support
 class VlkWindow : public openage::renderer::Window {
-	vlk_capabilities capabilities;
+public:
+	VlkWindow(const char *title, size_t width, size_t height);
+	~VlkWindow();
+
+	VkInstance get_instance() const;
+	VkSurfaceKHR get_surface() const;
+
+private:
+	vlk_spec capabilities;
 
 	VkInstance instance;
 	VkSurfaceKHR surface;
@@ -36,15 +45,8 @@ class VlkWindow : public openage::renderer::Window {
 	VkDebugReportCallbackEXT debug_callback;
 #endif
 	VlkLoader loader;
-
-	SDL_Window* window;
-
-public:
-	VlkWindow(const char* title);
-	~VlkWindow();
-
-	VkInstance get_instance() const;
-	VkSurfaceKHR get_surface() const;
 };
 
-}}} // openage::renderer::vulkan
+} // namespace vulkan
+} // namespace renderer
+} // namespace openage

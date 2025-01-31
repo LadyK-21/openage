@@ -1,4 +1,4 @@
-# Copyright 2019-2022 the openage authors. See copying.md for legal info.
+# Copyright 2019-2024 the openage authors. See copying.md for legal info.
 #
 # pylint: disable=too-many-instance-attributes,too-few-public-methods
 
@@ -17,21 +17,21 @@ if typing.TYPE_CHECKING:
     from openage.convert.entity_object.conversion.combined_sprite import CombinedSprite
     from openage.convert.entity_object.conversion.combined_terrain import CombinedTerrain
     from openage.convert.entity_object.conversion.stringresource import StringResource
-    from openage.convert.entity_object.conversion.aoc.genie_civ import GenieCivilizationObject,\
+    from openage.convert.entity_object.conversion.aoc.genie_civ import GenieCivilizationObject, \
         GenieCivilizationGroup
-    from openage.convert.entity_object.conversion.aoc.genie_connection import GenieAgeConnection,\
+    from openage.convert.entity_object.conversion.aoc.genie_connection import GenieAgeConnection, \
         GenieBuildingConnection, GenieTechConnection, GenieUnitConnection
     from openage.convert.entity_object.conversion.aoc.genie_effect import GenieEffectBundle
     from openage.convert.entity_object.conversion.aoc.genie_graphic import GenieGraphic
     from openage.convert.entity_object.conversion.aoc.genie_sound import GenieSound
-    from openage.convert.entity_object.conversion.aoc.genie_tech import GenieTechObject,\
-        AgeUpgrade, BuildingLineUpgrade, BuildingUnlock, CivBonus, GenieTechEffectBundleGroup,\
+    from openage.convert.entity_object.conversion.aoc.genie_tech import GenieTechObject, \
+        AgeUpgrade, BuildingLineUpgrade, BuildingUnlock, CivBonus, GenieTechEffectBundleGroup, \
         InitiatedTech, StatUpgrade, UnitLineUpgrade, UnitUnlock
-    from openage.convert.entity_object.conversion.aoc.genie_terrain import GenieTerrainObject,\
-        GenieTerrainGroup
-    from openage.convert.entity_object.conversion.aoc.genie_unit import GenieUnitObject,\
-        GenieAmbientGroup, GenieBuildingLineGroup, GenieMonkGroup, GenieUnitLineGroup,\
-        GenieUnitTaskGroup, GenieUnitTransformGroup, GenieVariantGroup, GenieVillagerGroup,\
+    from openage.convert.entity_object.conversion.aoc.genie_terrain import GenieTerrainObject, \
+        GenieTerrainGroup, GenieTerrainRestriction
+    from openage.convert.entity_object.conversion.aoc.genie_unit import GenieUnitObject, \
+        GenieAmbientGroup, GenieBuildingLineGroup, GenieMonkGroup, GenieUnitLineGroup, \
+        GenieUnitTaskGroup, GenieUnitTransformGroup, GenieVariantGroup, GenieVillagerGroup, \
         GenieGameEntityGroup
     from openage.convert.entity_object.export.media_export_request import MediaExportRequest
     from openage.convert.entity_object.export.metadata_export import MetadataExport
@@ -59,7 +59,7 @@ class GenieObjectContainer(ConverterObjectContainer):
 
         # Auxiliary
         self.strings: StringResource = None
-        self.existing_graphics: list[str] = None
+        self.existing_graphics: set[str] = None
 
         # Phase 1: Genie-like objects
         # ConverterObject types (the data from the game)
@@ -75,6 +75,7 @@ class GenieObjectContainer(ConverterObjectContainer):
         self.genie_graphics: dict[int, GenieGraphic]  = {}
         self.genie_sounds: dict[int, GenieSound]  = {}
         self.genie_terrains: dict[int, GenieTerrainObject]  = {}
+        self.genie_terrain_restrictions: dict[int, GenieTerrainRestriction]  = {}
 
         # Phase 2: API-like objects
         # ConverterObjectGroup types (things that will become

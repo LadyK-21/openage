@@ -1,109 +1,132 @@
-// Copyright 2015-2019 the openage authors. See copying.md for legal info.
+// Copyright 2015-2024 the openage authors. See copying.md for legal info.
 
 #pragma once
 
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <string>
 
-#include <SDL2/SDL.h>
+#include <QKeyCombination>
+#include <QMouseEvent>
+#include <QWheelEvent>
+
+#include "coord/pixel.h"
 
 namespace openage {
 namespace input {
 
 /**
- * highest level classes of input
+ * Input classes.
  */
 enum class event_class {
+	// catch-all for all classes of events
 	ANY,
-	KEYBOARD,
-	CHAR,           // basic keycodes (lower-case, non-modified)
-	ALPHA,          // abc
-	DIGIT,          // 123
-	PRINT,          // remaining printable chars
-	NONPRINT,       // tab, return, backspace, delete
-	OTHER,          // arrows, home, end
-	UTF8,           // events with utf8 encoded data
-	MOUSE,
-	MOUSE_BUTTON,
-	MOUSE_BUTTON_UP,
-	MOUSE_BUTTON_DOWN,
-	MOUSE_WHEEL,
-	MOUSE_MOTION
-};
 
+	// main classes for the different input devices
+	KEYBOARD,
+	MOUSE,
+	WHEEL,
+	GUI,
+
+	// keyboard subclasses
+	ALPHA,    // abc
+	DIGIT,    // 123
+	PRINT,    // remaining printable chars
+	NONPRINT, // tab, return, backspace, delete
+	OTHER,    // arrows, home, end
+
+	// mouse subclasses
+	MOUSE_BUTTON,
+	MOUSE_BUTTON_DBL,
+	MOUSE_MOVE,
+};
 
 struct event_class_hash {
 	int operator()(const event_class &s) const;
 };
 
-
 /**
- * each event type mapped to parent type
+ * map event class to parent class
  */
-static std::unordered_map<event_class, event_class, event_class_hash> event_base {
+static std::unordered_map<event_class, event_class, event_class_hash> event_class_rel{
 	{event_class::KEYBOARD, event_class::ANY},
-	{event_class::CHAR, event_class::KEYBOARD},
-	{event_class::ALPHA, event_class::CHAR},
-	{event_class::DIGIT, event_class::CHAR},
-	{event_class::PRINT, event_class::CHAR},
+	{event_class::MOUSE, event_class::ANY},
+	{event_class::WHEEL, event_class::ANY},
+	{event_class::GUI, event_class::ANY},
+
+	{event_class::ALPHA, event_class::KEYBOARD},
+	{event_class::DIGIT, event_class::KEYBOARD},
+	{event_class::PRINT, event_class::KEYBOARD},
 	{event_class::NONPRINT, event_class::KEYBOARD},
 	{event_class::OTHER, event_class::KEYBOARD},
-	{event_class::UTF8, event_class::KEYBOARD},
-	{event_class::MOUSE, event_class::ANY},
+
 	{event_class::MOUSE_BUTTON, event_class::MOUSE},
-	{event_class::MOUSE_WHEEL, event_class::MOUSE},
-	{event_class::MOUSE_MOTION, event_class::MOUSE},
+	{event_class::MOUSE_BUTTON_DBL, event_class::MOUSE},
+	{event_class::MOUSE_MOVE, event_class::MOUSE},
 };
 
 /**
- * mods set on an event
- */
-enum class modifier {
-	CTRL,
-	ALT,
-	SHIFT
-};
-
-
-struct modifier_hash {
-	int operator ()(const modifier &s) const;
-};
-
-
-/**
- * types used by events
+ * Key/button identifiers.
  */
 using code_t = int;
-using modset_t = std::unordered_set<modifier, modifier_hash>;
-
 
 /**
- * base event type containing event handler and event code
+ * Base event that contains event class and key/button identifier.
  */
 class ClassCode {
 public:
+	ClassCode() = default;
 	ClassCode(event_class cl, code_t code);
+	~ClassCode() = default;
 
 	/**
-	 * classes ordered with most specific first
+	 * Get all event classes that are covered by this class code,
+	 * ordered from most specific to most generic.
+	 *
+	 * @return Event classes.
 	 */
 	std::vector<event_class> get_classes() const;
-	bool has_class(const event_class &c) const;
 
-	const event_class eclass;
-	const code_t code;
+	/**
+	 * Check whether this class code is covered by a given event class.
+	 *
+	 * @param b Event class.
+	 *
+	 * @return true if the class code's event class is a descendant of or equal to \p other, else false.
+	 */
+	bool is_subclass(const event_class &other) const;
+
+	/**
+	 * Check whether two events are equal.
+	 *
+	 * Events are equal if their class, code, modset, and state are matching.
+	 */
+	bool operator==(const ClassCode &other) const;
+
+	/**
+	 * Event class.
+	 */
+	event_class cl;
+
+	/**
+	 * Identifier of the key/button that was pressed. It should be unique
+	 * for the given event class.
+	 */
+	code_t code;
 };
-
-
-bool operator ==(ClassCode a, ClassCode b);
 
 
 struct class_code_hash {
-	int operator ()(const ClassCode &k) const;
+	int operator()(const ClassCode &cc) const;
 };
 
+
+/**
+ * Modifiers and states.
+ */
+using modset_t = int;
+using state_t = int;
 
 /**
  * Input event, as triggered by some input device like
@@ -112,31 +135,74 @@ struct class_code_hash {
  */
 class Event {
 public:
-	Event(event_class cl, code_t code, modset_t mod);
-	Event(event_class cl, std::string , modset_t mod);
-
 	/**
-	 * Return keyboard text as char
-	 * returns 0 for non-text events
+	 * Create a new input event from a window event.
+	 *
+	 * @param ev Qt input event.
 	 */
-	char as_char() const;
+	Event(const QEvent &ev);
 
 	/**
-	 * Returns a utf encoded char
-	 * or an empty string for non-utf8 events
+	 * Create a new input event from custom values.
+	 *
+	 * This can be used to create the bindings for the input contexts.
+	 *
+	 * @param cl Event class.
+	 * @param code Key/button code.
+	 * @param mod Keyboard modifiers bitset.
+	 * @param state Key/button state.
 	 */
-	std::string as_utf8() const;
+	Event(event_class cl,
+	      code_t code,
+	      modset_t mod,
+	      state_t state);
+
+	~Event() = default;
 
 	/**
-	 * logable debug info
+	 * Get the associated Qt input event from the window manager.
+	 *
+	 * This may return \p nullptr if this event was not created from a
+	 * Qt input event.
+	 *
+	 * @return Qt input event, or \p nullptr.
+	 */
+	const std::shared_ptr<QEvent> &get_event() const;
+
+	/**
+	 * Check whether two events are equal.
+	 *
+	 * Events are equal if their class, code, modset, and state are matching.
+	 */
+	bool operator==(const Event &other) const;
+
+	/**
+	 * Get loggable debug info about the event.
 	 */
 	std::string info() const;
 
-	bool operator ==(const Event &other) const;
+	/**
+	 * Class code.
+	 */
+	ClassCode cc;
 
-	const ClassCode cc;
-	const modset_t mod;
-	const std::string utf8;
+	/**
+	 * Keyboard modifiers (CTRL, ALT, SHIFT, META) that were active when
+	 * the key/button was pressed.
+	 */
+	modset_t mod_code;
+
+	/**
+	 * Key/button state (pressed, released, double click, ...).
+	 */
+	state_t state;
+
+private:
+	/**
+	 * Associated Qt event from the window manager. May be \p nullptr
+	 * if this event is not generated from a window event.
+	 */
+	const std::shared_ptr<QEvent> event;
 };
 
 
@@ -144,18 +210,24 @@ struct event_hash {
 	int operator()(const Event &e) const;
 };
 
+using event_flags_t = std::unordered_map<std::string, std::string>;
 
-using event_set_t = std::unordered_set<Event, event_hash>;
+/**
+ * Contains information about a triggered event and other
+ * input meta information.
+ */
+struct event_arguments {
+	// Triggering event
+	const Event e;
+
+	// Mouse position
+	const coord::input mouse;
+	const coord::input_delta motion;
+
+	// additional settings
+	const event_flags_t flags = {};
+};
 
 
-// SDL mapping functions
-
-modset_t sdl_mod(SDL_Keymod mod);
-Event sdl_key(SDL_Keycode code, SDL_Keymod mod=KMOD_NONE);
-Event utf8(const std::string &text);
-Event sdl_mouse(int button, SDL_Keymod mod=KMOD_NONE);
-Event sdl_mouse_up_down(int button, bool up, SDL_Keymod mod=KMOD_NONE);
-Event sdl_wheel(int direction, SDL_Keymod mod=KMOD_NONE);
-
-
-}} // openage::input
+} // namespace input
+} // namespace openage

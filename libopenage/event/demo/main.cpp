@@ -1,24 +1,26 @@
-// Copyright 2016-2019 the openage authors. See copying.md for legal info.
+// Copyright 2016-2024 the openage authors. See copying.md for legal info.
 
 #include "main.h"
 
 #include <chrono>
 #include <ratio>
-#include <SDL.h>
+#include <thread>
 
 #include "config.h"
-#include "../event.h"
-#include "aicontroller.h"
-#include "gamestate.h"
-#include "gui.h"
-#include "physics.h"
+#include "event/demo/aicontroller.h"
+#include "event/demo/gamestate.h"
+#include "event/demo/gui.h"
+#include "event/demo/physics.h"
+#include "event/event.h"
+#include "event/event_loop.h"
+#include "renderer/gui/integration/public/gui_application_with_logger.h"
 
 #if WITH_NCURSES
-#ifdef __MINGW32__
-#include <ncurses/ncurses.h>
-#else
-#include <ncurses.h>
-#endif // __MINGW32__
+	#ifdef __MINGW32__
+		#include <ncurses/ncurses.h>
+	#else
+		#include <ncurses.h>
+	#endif // __MINGW32__
 #endif
 
 
@@ -40,7 +42,7 @@ enum class timescale {
 
 
 void curvepong(bool disable_gui, bool no_human) {
-
+	renderer::gui::GuiApplicationWithLogger gui_app{};
 	bool enable_gui = not disable_gui;
 	bool human_player = not no_human;
 
@@ -58,13 +60,14 @@ void curvepong(bool disable_gui, bool no_human) {
 	bool running = true;
 
 	while (running) {
-		auto loop = std::make_shared<Loop>();
-		curve::time_t now = 1;
+		auto loop = std::make_shared<EventLoop>();
+		time::time_t now = 1;
 		Physics phys;
 
 		auto state = std::make_shared<PongState>(loop, enable_gui
 #if WITH_NCURSES
-		                                         , gui
+		                                         ,
+		                                         gui
 #endif
 		);
 		Physics::init(state, loop, now);
@@ -78,7 +81,7 @@ void curvepong(bool disable_gui, bool no_human) {
 #if WITH_NCURSES
 		if (state->enable_gui) {
 			gui->clear();
-			gui->get_display_size(state, now);  // update gui related parameters
+			gui->get_display_size(state, now); // update gui related parameters
 		}
 		else {
 #endif
@@ -95,10 +98,10 @@ void curvepong(bool disable_gui, bool no_human) {
 		std::vector<PongEvent> inputs;
 
 		// this is the game loop, running while both players live!
-		while (state->p1->lives->get(now) > 0 and
-		       state->p2->lives->get(now) > 0) {
-
+		while (state->p1->lives->get(now) > 0 and state->p2->lives->get(now) > 0) {
 			auto loop_start = Clock::now();
+
+			gui_app.process_events();
 
 #if WITH_NCURSES
 			if (enable_gui) {
@@ -111,19 +114,13 @@ void curvepong(bool disable_gui, bool no_human) {
 			// player 1 can be AI or human.
 
 			if (human_player) {
-				phys.process_input(state, state->p1,
-				                   inputs, loop, now);
+				phys.process_input(state, state->p1, inputs, loop, now);
 			}
 			else {
-
-				phys.process_input(state, state->p1,
-				                   get_ai_inputs(state->p1, state->ball, now),
-				                   loop, now);
+				phys.process_input(state, state->p1, get_ai_inputs(state->p1, state->ball, now), loop, now);
 			}
 
-			phys.process_input(state, state->p2,
-			                   get_ai_inputs(state->p2, state->ball, now),
-			                   loop, now);
+			phys.process_input(state, state->p2, get_ai_inputs(state->p2, state->ball, now), loop, now);
 
 			// paddle x positions
 			state->p1->paddle_x = 0;
@@ -137,12 +134,9 @@ void curvepong(bool disable_gui, bool no_human) {
 				gui->draw(state, now);
 
 				int pos = 1;
-				mvprintw(pos++, state->display_boundary[0]/2 + 10, "Enqueued events:");
+				mvprintw(pos++, state->display_boundary[0] / 2 + 10, "Enqueued events:");
 				for (const auto &e : loop->get_queue().get_event_queue().get_sorted_events()) {
-					mvprintw(pos++, state->display_boundary[0]/2 + 10,
-					         "%f: %s",
-					         e->get_time().to_double(),
-					         e->get_eventhandler()->id().c_str());
+					mvprintw(pos++, state->display_boundary[0] / 2 + 10, "%f: %s", e->get_time().to_double(), e->get_eventhandler()->id().c_str());
 				}
 
 				gui->update_screen();
@@ -163,11 +157,11 @@ void curvepong(bool disable_gui, bool no_human) {
 			// microseconds per frame
 			// 30fps = 1s/30 = 1000000us/30 per frame
 			constexpr static std::chrono::microseconds per_frame = 33333us;
-			constexpr static curve::time_t per_frame_s = std::chrono::duration_cast<dt_s_t>(per_frame).count();
+			constexpr static time::time_t per_frame_s = std::chrono::duration_cast<dt_s_t>(per_frame).count();
 
 			if (speed == timescale::NOSLEEP) {
 				// increase the simulation loop time a bit
-				SDL_Delay(5);
+				std::this_thread::sleep_for(std::chrono::milliseconds(5));
 			}
 
 			dt_ms_t dt_us = Clock::now() - loop_start;
@@ -176,7 +170,7 @@ void curvepong(bool disable_gui, bool no_human) {
 				dt_ms_t wait_time = per_frame - dt_us;
 
 				if (wait_time > dt_ms_t::zero()) {
-					SDL_Delay(wait_time.count());
+					std::this_thread::sleep_for(wait_time);
 				}
 			}
 
@@ -205,4 +199,4 @@ void curvepong(bool disable_gui, bool no_human) {
 }
 
 
-} // openage::event::demo
+} // namespace openage::event::demo

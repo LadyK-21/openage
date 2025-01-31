@@ -1,12 +1,15 @@
-# Copyright 2015-2022 the openage authors. See copying.md for legal info.
+# Copyright 2015-2023 the openage authors. See copying.md for legal info.
 
 """
 Provides Path, which is analogous to pathlib.Path,
 and the type of FSLikeObject.root.
 """
+from typing import NoReturn, Union
 
 from io import UnsupportedOperation, TextIOWrapper
-from typing import NoReturn
+import os
+import pathlib
+import tempfile
 
 
 class Path:
@@ -32,7 +35,7 @@ class Path:
     # lower.
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, fsobj, parts=None):
+    def __init__(self, fsobj, parts: Union[str, bytes, bytearray, list, tuple] = None):
         if isinstance(parts, str):
             parts = parts.encode()
 
@@ -62,6 +65,9 @@ class Path:
                 result.append(part)
 
         self.fsobj = fsobj
+
+        # Set to True by create_temp_file or create_temp_dir
+        self.is_temp: bool = False
 
         # use tuple instead of list to prevent accidential modification
         self.parts = tuple(result)
@@ -127,6 +133,9 @@ class Path:
         else:
             raise UnsupportedOperation("unsupported open mode: " + mode)
 
+        if handle is None:
+            raise IOError(f"failed to acquire valid file handle for {self} in mode {mode}")
+
         if "b" in mode:
             return handle
 
@@ -139,6 +148,10 @@ class Path:
     def open_w(self):
         """ open with mode='wb' """
         return self.fsobj.open_w(self.parts)
+
+    def open_a(self):
+        """ open with mode='ab' """
+        return self.fsobj.open_a(self.parts)
 
     def _get_native_path(self):
         """
@@ -227,12 +240,12 @@ class Path:
         else:
             self.unlink()
 
-    @property
+    @ property
     def mtime(self):
         """ Returns the time of last modification of the file or directory. """
         return self.fsobj.mtime(self.parts)
 
-    @property
+    @ property
     def filesize(self):
         """ Returns the file size. """
         return self.fsobj.filesize(self.parts)
@@ -252,17 +265,17 @@ class Path:
         """ Polls the installed watches for the entire file-system. """
         self.fsobj.poll_watches()
 
-    @property
+    @ property
     def parent(self):
         """ Parent path object. The parent of root is root. """
         return type(self)(self.fsobj, self.parts[:-1])
 
-    @property
+    @ property
     def name(self):
         """ The name of the topmost component (str). """
         return self.parts[-1].decode()
 
-    @property
+    @ property
     def suffix(self):
         """ The last suffix of the name of the topmost component (str). """
         name = self.name
@@ -271,7 +284,7 @@ class Path:
             return ""
         return name[pos:]
 
-    @property
+    @ property
     def suffixes(self):
         """ The suffixes of the name of the topmost component (str list). """
         name = self.name
@@ -279,7 +292,7 @@ class Path:
             name = name[1:]
         return ['.' + suffix for suffix in name.split('.')[1:]]
 
-    @property
+    @ property
     def stem(self):
         """ Name without suffix (such that stem + suffix == name). """
         name = self.name
@@ -326,4 +339,34 @@ class Path:
         """This is only valid for UnionPath, don't call here"""
         # pylint: disable=no-self-use,unused-argument
         # TODO: https://github.com/PyCQA/pylint/issues/2329
-        raise Exception("Do not call mount on Path instances!")
+        raise PermissionError("Do not call mount on Path instances!")
+
+    @staticmethod
+    def get_temp_file():
+        """
+        Creates a temporary file.
+        """
+        temp_fd, temp_file = tempfile.mkstemp()
+
+        # Close the file descriptor to release resources
+        os.close(temp_fd)
+
+        # Wrap the temporary file path in a Path object and return it
+        path = Path(pathlib.Path(temp_file))
+        path.is_temp = True
+
+        return path
+
+    @staticmethod
+    def get_temp_dir():
+        """
+        Creates a temporary directory.
+        """
+        # Create a temporary directory using tempfile.mkdtemp
+        temp_dir = tempfile.mkdtemp()
+
+        # Wrap the temporary directory path in a Path object and return it
+        path = Path(pathlib.Path(temp_dir))
+        path.is_temp = True
+
+        return path

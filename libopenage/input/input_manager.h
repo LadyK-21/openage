@@ -1,90 +1,80 @@
-// Copyright 2015-2019 the openage authors. See copying.md for legal info.
+// Copyright 2015-2024 the openage authors. See copying.md for legal info.
 
 #pragma once
 
-// pxd: from libcpp cimport bool
-#include <functional>
-// pxd: from libcpp.string cimport string
-#include <string>
-#include <SDL2/SDL.h>
+#include <memory>
+#include <vector>
 
-#include "../handlers.h"
-#include "action.h"
-#include "event.h"
-#include "input_context.h"
+#include <QKeyEvent>
+#include <QMouseEvent>
+#include <QWheelEvent>
 
+#include "coord/pixel.h"
+#include "input/action.h"
 
-namespace openage {
+namespace qtgui {
+class GuiInput;
+}
 
+namespace openage::input {
+
+namespace camera {
+class Controller;
+} // namespace camera
+
+namespace game {
+class Controller;
+} // namespace game
+
+namespace hud {
+class Controller;
+} // namespace hud
+
+class InputContext;
 
 /**
- * The openage input layer.
- * It gets all the events and processes them accordingly.
+ * The input manager tracks input signals from peripherals or the
+ * GUI and turns them into input events that execute some action.
  */
-namespace input {
-
-/**
- * maps actions to events.
- */
-using binding_map_t = std::unordered_map<action_t, Event>;
-
-
-/**
- * The input manager manages all input layers (hud, game, ...)
- * and triggers the registered actions depending on the active layer.
- *
- * pxd:
- *
- * cppclass InputManager:
- *     bool set_bind(char* bind_char, string action) except +
- *     string get_bind(string action) except +
- */
-class InputManager : public InputHandler {
+class InputManager {
 public:
-	/**
-	 * Screen edges used for edge scrolling.
-	 */
-	enum class Edge {
-		LEFT,
-		RIGHT,
-		UP,
-		DOWN
-	};
+	InputManager();
 
-	InputManager(ActionManager *action_manager);
+	~InputManager() = default;
 
 	/**
-	 * Return the string representation of the bind assignated to an action.
+	 * Set the GUI input handler.
+	 *
+	 * @param gui_input GUI input handler.
 	 */
-	std::string get_bind(const std::string &action);
+	void set_gui(const std::shared_ptr<qtgui::GuiInput> &gui_input);
 
 	/**
-	 * Set the given action to be triggered by the given bind (key/mouse
-	 * /wheel). Remove previous assignation. Do nothing if either they
-	 * given bind or action is invalid/unknow.
+	 * Set the controller for the camera.
+	 *
+	 * @param controller Camera controller.
 	 */
-	bool set_bind(const std::string &bind_str, const std::string &action);
+	void set_camera_controller(const std::shared_ptr<camera::Controller> &controller);
 
 	/**
-	 * Return the string representation of the key event.
+	 * Set the controller for the game simulation.
+	 *
+	 * @param controller Game controller.
 	 */
-	std::string key_bind_to_string(const Event &ev);
+	void set_game_controller(const std::shared_ptr<game::Controller> &controller);
 
 	/**
-	 * Return the string representation of the mouse event.
+	 * Set the controller for the HUD.
+	 *
+	 * @param controller HUD controller.
 	 */
-	std::string mouse_bind_to_string(const Event &ev);
-
-	/**
-	 * Return the key representation of the event.
-	 */
-	std::string wheel_bind_to_string(const Event &ev);
+	void set_hud_controller(const std::shared_ptr<hud::Controller> controller);
 
 	/**
 	 * returns the global keybind context.
 	 * actions bound here will be retained even when override_context is called.
 	 */
-	InputContext &get_global_context();
+	const std::shared_ptr<InputContext> &get_global_context();
 
 	/**
 	 * Returns the context on top.
@@ -92,44 +82,53 @@ public:
 	 * since the global context will be
 	 * considered on top when none are registered
 	 */
-	InputContext &get_top_context();
+	const std::shared_ptr<InputContext> &get_top_context();
 
 	/**
-	 * register a hotkey context by pushing it onto the stack.
-	 *
-	 * this adds the given pointer to the `contexts` list.
-	 * that way the context lays on "top".
+	 * Get the info for all events which are bound currently.
+	 */
+	std::vector<std::string> active_binds() const;
+
+	/**
+	 * Push a context on top of the stack, making it the
+	 * current top context.
 	 *
 	 * if other contexts are registered afterwards,
-	 * it wanders down the stack, i.e. looses priority.
+	 * it wanders down the stack, i.e. loses priority.
 	 */
-	void push_context(InputContext *context);
+	void push_context(const std::shared_ptr<InputContext> &context);
 
 	/**
-	 * removes any matching registered context from the stack.
+	 * Push the context with the specified ID on top of the stack,
+	 * making it the current top context.
+	 *
+	 * if other contexts are registered afterwards,
+	 * it wanders down the stack, i.e. loses priority.
+	 */
+	void push_context(const std::string &id);
+
+	/**
+	 * Remove the current top context from the stack.
+	 */
+	void pop_context();
+
+	/**
+	 * Removes any registered context matching the specified ID from the stack.
 	 *
 	 * the removal is done by finding the given pointer
-	 * in the `contexts` lists, then deleting it in there.
+	 * in the `active_contexts` lists, then deleting it in there.
 	 */
-	void remove_context(InputContext *context);
+	void pop_context(const std::string &id);
 
 	/**
-	 * true if the given event type is being ignored
+	 * Remove a context from the available contexts.
 	 */
-	bool ignored(const Event &e);
+	void remove_context(const std::string &id);
 
 	/**
-	 * manages the pressing of an input event (key, mouse, ...).
-	 * first checks whether an action is bound to it.
-	 * if it is, look for an handler to execute that handler.
-	 * returns true if the event was responded to
+	 * Add a context to the available contexts.
 	 */
-	bool trigger(const Event &e);
-
-	/**
-	 * sets the state of a specific key
-	 */
-	void set_state(const Event &ev, bool is_down);
+	void add_context(const std::shared_ptr<InputContext> context);
 
 	/**
 	 * updates mouse position state and motion
@@ -142,102 +141,64 @@ public:
 	void set_motion(int x, int y);
 
 	/**
-	 * enable relative mouse mode
-	 */
-	void set_relative(bool mode);
-
-	/**
-	 * Query whether cursor is at edgo of screen
+	 * Process an input event from the Qt window management.
 	 *
-	 * edge variable is enum Edges
+	 * @param ev Qt input event.
 	 *
-	 * @return true when the mouse is at the queried screen edge, false else.
+	 * @return true if the event is accepted, else false.
 	 */
-	bool is_mouse_at_edge(Edge edge, int window_size);
+	bool process(const QEvent &ev);
 
-	/**
-	 * Query stored pressing stat for a key.
-	 *
-	 * note that the function stores a unknown/new keycode
-	 * as 'not pressed' if requested
-	 * @return true when the key is pressed, false else.
-	 */
-	bool is_down(const ClassCode &cc) const;
-	bool is_down(event_class ec, code_t code) const;
-
-	/**
-	 * Most cases should use above is_down(class, code)
-	 * instead to avoid relying on sdl types
-	 *
-	 * Query stored pressing stat for a key.
-	 * @return true when the key is pressed, false else.
-	 */
-	bool is_down(SDL_Keycode k) const;
-
-	/**
-	 * Checks whether a key modifier is held down.
-	 */
-	bool is_mod_down(modifier mod) const;
-
-	/**
-	 * When a SDL event happens, this is called.
-	 */
-	bool on_input(SDL_Event *e) override;
-
-	/**
-	 * Return a string representation of active key bindings
-	 * from the given context.
-	 */
-	std::vector<std::string> active_binds(const std::unordered_map<action_t, action_func_t> &ctx_actions) const;
-
-	/**
-	 * Get the action manager attached to this input manager.
-	 */
-	ActionManager *get_action_manager() const;
 
 private:
-	modset_t get_mod() const;
-
 	/**
-	 * The action manager to used for keybind action lookups.
+	 * Process the (default) action for an input event.
+	 *
+	 * @param ev Input event.
+	 * @param action Action bound to the event.
+	 * @param bind_ctx Context the action is bound in.
 	 */
-	ActionManager *action_manager;
+	void process_action(const input::Event &ev,
+	                    const input_action &action,
+	                    const std::shared_ptr<InputContext> &ctx);
 
 	/**
 	 * The global context. Used as fallback.
 	 */
-	InputContext global_context;
-
-	/**
-	 * Maps actions to events.
-	 */
-	binding_map_t keys;
+	std::shared_ptr<InputContext> global_context;
 
 	/**
 	 * Stack of active input contexts.
 	 * The most recent entry is pushed on top of the stack.
 	 */
-	std::vector<InputContext *> contexts;
+	std::vector<std::shared_ptr<InputContext>> active_contexts;
 
 	/**
-	 * key to is_down map.
-	 * stores a mapping between keycodes and its pressing state.
-	 * a true value means the key is currently pressed,
-	 * false indicates the key is untouched.
+	 * Map of all available contexts, referencable by an ID.
+	 *
+	 * TODO: Move this to cvar manager?
 	 */
-	std::unordered_map<ClassCode, bool, class_code_hash> states;
+	std::unordered_map<std::string, std::shared_ptr<InputContext>> available_contexts;
 
 	/**
-	 * Current key modifiers.
-	 * Included ALL modifiers including num lock and caps lock.
+	 * Interface to the game simulation.
 	 */
-	modset_t keymod;
+	std::shared_ptr<game::Controller> game_controller;
 
 	/**
-	 * mode where mouse position is ignored
-	 * used for map scrolling
+	 * Interface to the camera.
 	 */
-	bool relative_mode;
+	std::shared_ptr<camera::Controller> camera_controller;
+
+	/**
+	 * Interface to the HUD.
+	 */
+	std::shared_ptr<hud::Controller> hud_controller;
+
+	/**
+	 * Interface to the GUI.
+	 */
+	std::shared_ptr<qtgui::GuiInput> gui_input;
 
 	/**
 	 * mouse position in the window
@@ -248,8 +209,17 @@ private:
 	 * mouse position relative to the last frame position.
 	 */
 	coord::input_delta mouse_motion{0, 0};
-
-	friend InputContext;
 };
 
-}} // openage::input
+/**
+ * Setup default input actions:
+ *
+ * - Camera movement
+ *
+ * TODO: Make this configurable.
+ *
+ * @param ctx Input context the actions are added to.
+ */
+void setup_defaults(const std::shared_ptr<InputContext> &ctx);
+
+} // namespace openage::input

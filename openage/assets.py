@@ -1,4 +1,4 @@
-# Copyright 2014-2022 the openage authors. See copying.md for legal info.
+# Copyright 2014-2023 the openage authors. See copying.md for legal info.
 
 """
 Code for locating the game assets.
@@ -18,10 +18,10 @@ from . import config
 from . import default_dirs
 
 if typing.TYPE_CHECKING:
-    from openage.util.fslike.directory import Directory
+    from openage.util.fslike.union import UnionPath
 
 
-def get_asset_path(custom_asset_dir: str = None) -> Directory:
+def get_asset_path(custom_asset_dir: str = None) -> UnionPath:
     """
     Returns a Path object for the game assets.
 
@@ -33,13 +33,15 @@ def get_asset_path(custom_asset_dir: str = None) -> Directory:
     the game as its data source(s).
     """
 
+    # mount the possible locations in an union:
+    result = Union().root
+
     # if we're in devmode, use only the in-repo asset folder
     if not custom_asset_dir and config.DEVMODE:
-        return Directory(os.path.join(config.BUILD_SRC_DIR, "assets")).root
+        result.mount(Directory(os.path.join(config.BUILD_SRC_DIR, "assets")).root)
+        return result
 
-    # else, mount the possible locations in an union:
-    # overlay the global dir and the user dir.
-    result = Union().root
+    # else overlay the global dir and the user dir.
 
     # the cmake-determined folder for storing assets
     global_data = Path(config.GLOBAL_ASSET_DIR)
@@ -75,4 +77,4 @@ def test():
     fakecli.add_argument("--asset-dir", default=None)
     args = fakecli.parse_args([])
 
-    assert_value(get_asset_path(args.asset_dir)['missing.png'].filesize, 580)
+    assert_value(get_asset_path(args.asset_dir)['test']['textures']['missing.png'].filesize, 580)

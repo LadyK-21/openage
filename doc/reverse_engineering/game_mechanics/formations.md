@@ -89,7 +89,7 @@ For a start one has to look at the behavior of an individual subformation. Let's
 ............
 ```
 
-The number of lines (or `row_count`) in this subformation is always determined by the number of its units. Unit width and different unit types have no influence here. The `row_count` can be calculated by an algorithm ([see here](https://gist.github.com/Piruzzolo/e744c9da5ed18898fae85f29a560e90f)). After the value has been calculated the units will be sorted into the lines starting from the top left.
+The number of lines (or `row_count`) in this subformation is always determined by the number of its units. Unit width and different unit types have no influence here. The `row_count` can be calculated by an algorithm. After the value has been calculated the units will be sorted into the lines starting from the top left.
 
 ```
 ............
@@ -123,7 +123,7 @@ The same rules apply, if more than two unit types are used. We will now have a l
 ..............
 ```
 
-Which unit type is sorted into the line first depends on the order in which the player selected the unit types (or how they are ordered inside the selection queue). In the first example of this section, the player selected the archers first and added the skirmishers to his selection. The second and above example would be the result of selecting longbowman first, archers second, skirmishers third and throwing axeman last.
+Which unit type is sorted into the line first depends on the order in which the player selected the unit types (or how they are ordered inside the selection queue). In the first example of this section, the player selected the archers first and added the skirmishers to their selection. The second and above example would be the result of selecting longbowman first, archers second, skirmishers third and throwing axeman last.
 
 #### Distance Between Units
 

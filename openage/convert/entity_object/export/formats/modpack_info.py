@@ -1,4 +1,4 @@
-# Copyright 2020-2022 the openage authors. See copying.md for legal info.
+# Copyright 2020-2024 the openage authors. See copying.md for legal info.
 #
 # pylint: disable=too-many-instance-attributes,too-many-arguments
 
@@ -10,7 +10,7 @@ import toml
 from ..data_definition import DataDefinition
 
 
-FILE_VERSION = "1"
+FILE_VERSION = "2"
 
 
 class ModpackInfo(DataDefinition):
@@ -25,6 +25,7 @@ class ModpackInfo(DataDefinition):
         # Info
         self.packagename: str = None
         self.version: str = None
+        self.versionstr: str = None
         self.extra_info: dict[str, str] = {}
 
         # Assets
@@ -152,7 +153,8 @@ class ModpackInfo(DataDefinition):
     def set_info(
         self,
         packagename: str,
-        version: str,
+        modpack_version: str,
+        versionstr: str = None,
         repo: str = None,
         alias: str = None,
         title: str = None,
@@ -166,8 +168,10 @@ class ModpackInfo(DataDefinition):
 
         :param packagename: Name of the modpack.
         :type packagename: str
-        :param version: Version number.
-        :type version: str
+        :param modpack_version: Internal version number. Must have semver format.
+        :type modpack_version: str
+        :param versionstr: Human-readable version number. Can be anything.
+        :type versionstr: str
         :param repo: Name of the repo where the package is hosted.
         :type repo: str
         :param alias: Alias of the modpack.
@@ -184,7 +188,10 @@ class ModpackInfo(DataDefinition):
         :type licenses: list
         """
         self.packagename = packagename
-        self.version = version
+        self.version = modpack_version
+
+        if versionstr:
+            self.extra_info["versionstr"] = versionstr
 
         if repo:
             self.extra_info["repo"] = repo
@@ -219,10 +226,10 @@ class ModpackInfo(DataDefinition):
 
         # info table
         if not self.packagename:
-            raise Exception(f"{self}: packagename needs to be defined before dumping.")
+            raise RuntimeError(f"{self}: packagename needs to be defined before dumping.")
 
         if not self.version:
-            raise Exception(f"{self}: version needs to be defined before dumping.")
+            raise RuntimeError(f"{self}: version needs to be defined before dumping.")
 
         info_table = {"info": {}}
         info_table["info"].update(

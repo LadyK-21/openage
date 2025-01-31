@@ -1,0 +1,13 @@
+add_sources(libopenage
+    ability.cpp
+    activity.cpp
+    animation.cpp
+    definitions.cpp
+    patch.cpp
+    player_setup.cpp
+    property.cpp
+    sound.cpp
+    terrain.cpp
+    types.cpp
+    util.cpp
+)

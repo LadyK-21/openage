@@ -1,4 +1,4 @@
-# Copyright 2021-2022 the openage authors. See copying.md for legal info.
+# Copyright 2021-2024 the openage authors. See copying.md for legal info.
 
 """
 Lookup dicts for the EnumLookupMember instances.
@@ -279,11 +279,13 @@ RESOURCE_TYPES = {
     248: "DE2_UNKNOWN_248",
     249: "DE2_UNKNOWN_249",
     250: "DE2_UNKNOWN_250",
+    501: "DE2_UNKNOWN_501",
+    506: "DE2_UNKNOWN_506",
 }
 
 EFFECT_APPLY_TYPE = {
     # unused assignage: a = -1, b = -1, c = -1, d = 0
-    -1: "DISABLED",
+    255: "DISABLED",
     # if a != -1: a == unit_id, else b == unit_class_id; c =
     # attribute_id, d = new_value
     0: "ATTRIBUTE_ABSSET",
@@ -318,6 +320,8 @@ EFFECT_APPLY_TYPE = {
     14: "TEAM_ATTRIBUTE_RELSET",
     15: "TEAM_ATTRIBUTE_MUL",
     16: "TEAM_RESOURCE_MUL",
+    17: "TEAM_SPAWN_UNIT",
+    18: "TEAM_RESEARCH_TIME_MODIFY",
 
     # same as 0-6 but applied to enemies
     20: "ENEMY_ATTRIBUTE_ABSSET",
@@ -335,6 +339,11 @@ EFFECT_APPLY_TYPE = {
     101: "TECHCOST_MODIFY",
     102: "TECH_TOGGLE",       # d == research_id
     103: "TECH_TIME_MODIFY",  # a == research_id, if c == 0: d==absval else d==relval
+
+    # unknown; used in DE2 BfG
+    199: "UNKNOWN",
+    200: "UNKNOWN",
+    201: "UNKNOWN",
 
     # attribute_id:
     # 0: hit points
@@ -429,6 +438,9 @@ COMMAND_ABILITY = {
     149: "SHEAR",
     150: "REGENERATION",
     151: "FEITORIA",
+    153: "RESOURCE_FOLLOW",
+    154: "LOOT",         # Chieftains tech; looting on killing villagers, monks, trade carts
+    155: "BOOST_MOVE_AND_ATTACK",
     768: "UNKNOWN_768",
     1024: "UNKNOWN_1024",
 }
@@ -493,12 +505,16 @@ ARMOR_CLASS = {
     29: "EAGLE_WARRIOR",
     30: "HD_CAMEL",
     31: "DE2_UNKOWN_31",
-    32: "DE2_UNKOWN_32",
+    32: "DE2_CONDOTTIERO",
     33: "DE2_UNKOWN_33",
-    34: "DE2_UNKOWN_34",
-    35: "DE2_UNKOWN_35",
-    36: "DE2_UNKOWN_36",
-    37: "DE2_UNKOWN_36",
+    34: "DE2_FISHING_SHIP",
+    35: "DE2_MAMELUKE",
+    36: "DE2_HERO",
+    37: "DE2_SIEGE_BALLISTA",
+    38: "DE2_SKIRMISHER",
+    39: "DE2_CAMEL_RIDER",
+    40: "DE2_UNKNOWN_40",
+    60: "DE2_UNKNOWN_60",
 }
 
 UNIT_CLASSES = {
@@ -586,28 +602,28 @@ FOG_VISIBILITY = {
 
 TERRAIN_RESTRICTIONS = {
     -0x01: "NONE",
-    0x00: "ANY",
-    0x01: "SHORELINE",
-    0x02: "WATER",
-    0x03: "WATER_SHIP_0x03",
-    0x04: "FOUNDATION",
+    0x00: "ANY",                  # projectiles
+    0x01: "SHORELINE",            # boar, deer, wolf
+    0x02: "WATER",                # unused in AoC
+    0x03: "WATER_SHIP_0x03",      # warships
+    0x04: "FOUNDATION",           # buildings
     0x05: "NOWHERE",              # can't place anywhere
     0x06: "WATER_DOCK",           # shallow water for dock placement
-    0x07: "SOLID",
-    0x08: "NO_ICE_0x08",
+    0x07: "SOLID",                # moving land units
+    0x08: "NO_ICE_0x08",          # resource piles (gold, stone, berries)
     0x09: "SWGB_ONLY_WATER0",
-    0x0A: "NO_ICE_0x0A",
-    0x0B: "FOREST",
-    0x0C: "UNKNOWN_0x0C",
-    0x0D: "WATER_0x0D",           # great fish
-    0x0E: "UNKNOWN_0x0E",
-    0x0F: "WATER_SHIP_0x0F",      # transport ship
+    0x0A: "NO_ICE_0x0A",          # gate, palisades, walls
+    0x0B: "FOREST",               # trees
+    0x0C: "UNKNOWN_0x0C",         # projectile explosions on bridge?
+    0x0D: "WATER_0x0D",           # great fish, fishtrap, fishing ship
+    0x0E: "UNKNOWN_0x0E",         # projectile decay on bridge?
+    0x0F: "WATER_SHIP_0x0F",      # transport ship, longboat
     0x10: "GRASS_SHORELINE",      # for gates and walls
     0x11: "WATER_ANY_0x11",
-    0x12: "UNKNOWN_0x12",
-    0x13: "FISH_NO_ICE",
-    0x14: "WATER_ANY_0x14",
-    0x15: "WATER_SHALLOW",
+    0x12: "UNKNOWN_0x12",         # projectile decay on bridge?
+    0x13: "WATER_ICE",            # small fish
+    0x14: "NO_WATER",             # siege units, trade cart
+    0x15: "WATER_SHALLOW",        # sea walls
     0x16: "SWGB_GRASS_SHORE",
     0x17: "SWGB_ANY",
     0x18: "SWGB_ONLY_WATER1",
@@ -723,11 +739,12 @@ BLAST_OFFENSE_TYPES = {
     18: "UNKNOWN_18",
     34: "UNKNOWN_34",
     66: "UNKNOWN_66",
-    138: "PIERCE",      # attack units behind target (Ghulam)
+    130: "DE2_PIERCE",  # attack units behind target (Ghulam); used since Return of Rome
+    138: "DE2_PIERCE",  # attack units behind target (Ghulam); unused since Return of Rome
 }
 
 CREATABLE_TYPES = {
-    0: "NONHUMAN",  # building, animal, ship
+    0: "NONHUMAN",  # animal, ship
     1: "VILLAGER",  # villager, king
     2: "MELEE",     # soldier, siege, predator, trader
     3: "MOUNTED",   # camel rider
@@ -735,6 +752,7 @@ CREATABLE_TYPES = {
     5: "RANGED_PROJECTILE",  # archer
     6: "RANGED_MAGIC",       # monk
     21: "TRANSPORT_SHIP",
+    255: "OTHER",    # building, relic
 }
 
 GARRISON_TYPES = {
@@ -744,7 +762,9 @@ GARRISON_TYPES = {
     0x04: "CAVALRY",
     0x07: "SWGB_NO_JEDI",
     0x08: "MONK",
+    0x09: "DE2_FORTIFIED_CHURCH",
     0x0b: "NOCAVALRY",
     0x0f: "ALL",
     0x10: "SWGB_LIVESTOCK",
+    0x40: "DE2_UNKNOWN_40",
 }

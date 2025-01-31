@@ -1,10 +1,10 @@
 add_sources(libopenage
+	event_loop.cpp
 	event.cpp
 	evententity.cpp
 	eventhandler.cpp
 	eventqueue.cpp
 	eventstore.cpp
-	loop.cpp
 	state.cpp
 	tests.cpp
 )

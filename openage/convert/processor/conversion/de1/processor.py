@@ -1,4 +1,4 @@
-# Copyright 2021-2022 the openage authors. See copying.md for legal info.
+# Copyright 2021-2024 the openage authors. See copying.md for legal info.
 
 """
 Convert data from DE1 to openage formats.
@@ -10,15 +10,15 @@ import typing
 from .....log import info
 from ....entity_object.conversion.aoc.genie_graphic import GenieGraphic
 from ....entity_object.conversion.aoc.genie_object_container import GenieObjectContainer
-from ....service.debug_info import debug_converter_objects,\
+from ....service.debug_info import debug_converter_objects, \
     debug_converter_object_groups
 from ....service.read.nyan_api_loader import load_api
 from ..aoc.processor import AoCProcessor
-from ..ror.modpack_subprocessor import RoRModpackSubprocessor
 from ..ror.nyan_subprocessor import RoRNyanSubprocessor
 from ..ror.pregen_subprocessor import RoRPregenSubprocessor
 from ..ror.processor import RoRProcessor
 from .media_subprocessor import DE1MediaSubprocessor
+from .modpack_subprocessor import DE1ModpackSubprocessor
 
 if typing.TYPE_CHECKING:
     from argparse import Namespace
@@ -107,6 +107,7 @@ class DE1Processor:
         cls.extract_genie_graphics(gamespec, dataset)
         RoRProcessor.extract_genie_sounds(gamespec, dataset)
         AoCProcessor.extract_genie_terrains(gamespec, dataset)
+        AoCProcessor.extract_genie_restrictions(gamespec, dataset)
 
         return dataset
 
@@ -170,7 +171,7 @@ class DE1Processor:
 
         DE1MediaSubprocessor.convert(full_data_set)
 
-        return RoRModpackSubprocessor.get_modpacks(full_data_set)
+        return DE1ModpackSubprocessor.get_modpacks(full_data_set)
 
     @staticmethod
     def extract_genie_graphics(gamespec: ArrayMember, full_data_set: GenieObjectContainer) -> None:
@@ -201,7 +202,7 @@ class DE1Processor:
             graphic_members = raw_graphic.value
 
             graphic = GenieGraphic(graphic_id, full_data_set, members=graphic_members)
-            if filename not in full_data_set.existing_graphics:
+            if filename.lower() not in full_data_set.existing_graphics:
                 graphic.exists = False
 
             full_data_set.genie_graphics.update({graphic.get_id(): graphic})

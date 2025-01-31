@@ -1,88 +1,100 @@
-// Copyright 2015-2016 the openage authors. See copying.md for legal info.
+// Copyright 2015-2023 the openage authors. See copying.md for legal info.
 
 #include "input_context.h"
 
-#include "input_manager.h"
+
+namespace openage::input {
+
+InputContext::InputContext(const std::string id) :
+	id{id},
+	by_event{},
+	by_class{} {}
 
 
-namespace openage {
-namespace input {
-
-
-InputContext::InputContext()
-	:
-	InputContext{nullptr} {}
-
-
-InputContext::InputContext(InputManager *manager)
-	:
-	utf8_mode{false} {
-
-	this->register_to(manager);
+const std::string &InputContext::get_id() {
+	return this->id;
 }
 
+void InputContext::set_game_bindings(const std::shared_ptr<game::BindingContext> &bindings) {
+	this->game_bindings = bindings;
+}
 
-std::vector<std::string> InputContext::active_binds() const {
-	if (this->input_manager == nullptr) {
-		return {};
+void InputContext::set_camera_bindings(const std::shared_ptr<camera::BindingContext> &bindings) {
+	this->camera_bindings = bindings;
+}
+
+void InputContext::set_hud_bindings(const std::shared_ptr<hud::BindingContext> &bindings) {
+	this->hud_bindings = bindings;
+}
+
+const std::shared_ptr<game::BindingContext> &InputContext::get_game_bindings() {
+	return this->game_bindings;
+}
+
+const std::shared_ptr<camera::BindingContext> &InputContext::get_camera_bindings() {
+	return this->camera_bindings;
+}
+
+const std::shared_ptr<hud::BindingContext> &InputContext::get_hud_bindings() {
+	return this->hud_bindings;
+}
+
+void InputContext::bind(const Event &ev, const input_action act) {
+	std::vector<input_action> actions{act};
+	this->by_event.emplace(std::make_pair(ev, actions));
+}
+
+void InputContext::bind(const event_class &cl, const input_action act) {
+	std::vector<input_action> actions{act};
+	this->by_class.emplace(std::make_pair(cl, actions));
+}
+
+void InputContext::bind(const Event &ev, const std::vector<input_action> &&acts) {
+	this->by_event.emplace(std::make_pair(ev, std::move(acts)));
+}
+
+void InputContext::bind(const event_class &cl, const std::vector<input_action> &&acts) {
+	this->by_class.emplace(std::make_pair(cl, std::move(acts)));
+}
+
+bool InputContext::is_bound(const Event &ev) const {
+	return this->by_event.contains(ev) || this->by_class.contains(ev.cc.cl);
+}
+
+const std::vector<input_action> &InputContext::lookup(const Event &ev) const {
+	auto event_lookup = this->by_event.find(ev);
+	if (event_lookup != std::end(this->by_event)) {
+		return (*event_lookup).second;
 	}
 
-	// TODO: try to purge this backpointer to the input manager.
-	return this->input_manager->active_binds(this->by_type);
-}
-
-void InputContext::bind(action_t type, const action_func_t act) {
-	this->by_type.emplace(std::make_pair(type, act));
-}
-
-void InputContext::bind(const Event &ev, const action_func_t act) {
-	this->by_event.emplace(std::make_pair(ev, act));
-}
-
-void InputContext::bind(event_class ec, const action_check_t act) {
-	this->by_class.emplace(std::make_pair(ec, act));
-}
-
-bool InputContext::execute_if_bound(const action_arg_t &arg) {
-
-	// arg type hints are highest priority
-	for (auto &h : arg.hints) {
-		auto action = this->by_type.find(h);
-		if (action != this->by_type.end()) {
-			action->second(arg);
-			return true;
+	for (auto eclass : ev.cc.get_classes()) {
+		auto class_lookup = this->by_class.find(eclass);
+		if (class_lookup != std::end(this->by_class)) {
+			return (*class_lookup).second;
 		}
 	}
 
-	// specific event mappings
-	auto action = this->by_event.find(arg.e);
-	if (action != this->by_event.end()) {
-		action->second(arg);
-		return true;
+	throw Error{MSG(err) << "Event is not bound in context " << this->id};
+}
+
+std::vector<Event> InputContext::get_event_binds() const {
+	std::vector<Event> result{};
+
+	for (auto bind : this->by_event) {
+		result.push_back(bind.first);
 	}
 
-	// check all possible class mappings
-	for (auto &c : arg.e.cc.get_classes()) {
-		auto action = this->by_class.find(c);
-		if (action != this->by_class.end() &&
-		    action->second(arg)) {
-			return true;
-		}
+	return result;
+}
+
+std::vector<event_class> InputContext::get_class_binds() const {
+	std::vector<event_class> result{};
+
+	for (auto bind : this->by_class) {
+		result.push_back(bind.first);
 	}
 
-	return false;
+	return result;
 }
 
-
-void InputContext::register_to(InputManager *manager) {
-	this->input_manager = manager;
-}
-
-
-void InputContext::unregister() {
-	this->input_manager = nullptr;
-}
-
-
-
-}} // openage::input
+} // namespace openage::input

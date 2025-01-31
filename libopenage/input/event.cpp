@@ -1,4 +1,4 @@
-// Copyright 2015-2019 the openage authors. See copying.md for legal info.
+// Copyright 2015-2023 the openage authors. See copying.md for legal info.
 
 #include "event.h"
 
@@ -7,30 +7,38 @@
 
 namespace openage::input {
 
-ClassCode::ClassCode(event_class cl, code_t code)
-	:
-	eclass(cl),
-	code(code) {
+int event_class_hash::operator()(const event_class &c) const {
+	return std::hash<int>()(static_cast<int>(c));
 }
+
+
+ClassCode::ClassCode(event_class cl, code_t code) :
+	cl{cl},
+	code{code} {}
 
 
 std::vector<event_class> ClassCode::get_classes() const {
 	std::vector<event_class> result;
 
 	// use event_base to traverse up the class tree
-	event_class ec = this->eclass;
-	result.push_back(ec);
-	while (event_base.count(ec) > 0) {
-		ec = event_base.at(ec);
-		result.push_back(ec);
+	event_class c = this->cl;
+	result.push_back(c);
+	while (event_class_rel.count(c) > 0) {
+		c = event_class_rel.at(c);
+		result.push_back(c);
 	}
 	return result;
 }
 
 
-bool ClassCode::has_class(const event_class &ec) const {
-	for (auto c : this->get_classes()) {
-		if (c == ec) {
+bool ClassCode::operator==(const ClassCode &other) const {
+	return this->cl == other.cl && this->code == other.code;
+}
+
+
+bool ClassCode::is_subclass(const event_class &other) const {
+	for (auto cl : this->get_classes()) {
+		if (cl == other) {
 			return true;
 		}
 	}
@@ -38,132 +46,96 @@ bool ClassCode::has_class(const event_class &ec) const {
 }
 
 
-bool operator ==(ClassCode a, ClassCode b) {
-	return a.eclass == b.eclass && a.code == b.code;
+int class_code_hash::operator()(const ClassCode &cc) const {
+	return std::hash<int>()(static_cast<int>(cc.cl))
+	       ^ std::hash<int>()(cc.code) * 3664657;
 }
 
 
-Event::Event(event_class cl, code_t code, modset_t mod)
-	:
-	cc(cl, code),
-	mod(std::move(mod)) {}
+Event::Event(const QEvent &ev) :
+	event{std::shared_ptr<QEvent>(ev.clone())} {
+	switch (this->event->type()) {
+	case QEvent::KeyPress:
+	case QEvent::KeyRelease: {
+		auto event = dynamic_pointer_cast<QKeyEvent>(this->event);
+		this->cc = ClassCode(event_class::KEYBOARD, event->key());
+		this->mod_code = event->modifiers();
+		this->state = event->type();
+	} break;
+	case QEvent::MouseButtonPress:
+	case QEvent::MouseButtonRelease: {
+		auto event = dynamic_pointer_cast<QMouseEvent>(this->event);
+		this->cc = ClassCode(event_class::MOUSE_BUTTON, event->button());
+		this->mod_code = event->modifiers();
+		this->state = event->type();
+	} break;
+	case QEvent::MouseButtonDblClick: {
+		auto event = dynamic_pointer_cast<QMouseEvent>(this->event);
+		this->cc = ClassCode(event_class::MOUSE_BUTTON_DBL, event->button());
+		this->mod_code = event->modifiers();
+		this->state = event->type();
+	} break;
+	case QEvent::MouseMove: {
+		auto event = dynamic_pointer_cast<QMouseEvent>(this->event);
+		this->cc = ClassCode(event_class::MOUSE_MOVE, event->button());
+		this->mod_code = event->modifiers();
+		this->state = event->type();
+	} break;
+	case QEvent::Wheel: {
+		auto event = dynamic_pointer_cast<QWheelEvent>(this->event);
+		if (event->angleDelta().y() > 0) {
+			// forward
+			this->cc = ClassCode(event_class::WHEEL, 1);
+		}
+		else {
+			// backwards
+			this->cc = ClassCode(event_class::WHEEL, -1);
+		}
+		this->mod_code = event->modifiers();
+		this->state = event->type();
+	} break;
+	// TODO: GUI events
+	default:
+		throw Error{MSG(err) << "Unrecognized input event type."};
+	}
+}
+
+Event::Event(event_class cl, code_t code, modset_t mod, state_t state) :
+	cc{cl, code},
+	mod_code{mod},
+	state{state},
+	event{nullptr} {}
 
 
-Event::Event(event_class cl, std::string text, modset_t mod)
-	:
-	cc(cl, 0),
-	mod(std::move(mod)),
-	utf8(std::move(text)) {}
-
-
-char Event::as_char() const {
-	return (cc.code & 0xff);
+const std::shared_ptr<QEvent> &Event::get_event() const {
+	return this->event;
 }
 
 
-std::string Event::as_utf8() const {
-	return utf8;
+bool Event::operator==(const Event &other) const {
+	return this->cc == other.cc
+	       && this->mod_code == other.mod_code
+	       && this->state == other.state;
 }
 
 
 std::string Event::info() const {
-	std::string result;
-	result += "[Event: ";
-	result += std::to_string(static_cast<int>(this->cc.eclass));
-	result += ", ";
-	result += std::to_string(this->cc.code);
-	result += ", ";
-	result += this->as_char();
-	result += " (";
-	result += std::to_string(this->mod.size());
-	result += ")]";
+	// TODO: human-readable info
+
+	std::string result = "[Event: ";
+	result += "class=" + std::to_string(static_cast<int>(this->cc.cl)) + ", ";
+	result += "code=" + std::to_string(this->cc.code) + ", ";
+	result += "modset=" + std::to_string(this->mod_code) + ", ";
+	result += "state=" + std::to_string(this->state) + "]";
 	return result;
-}
-
-
-bool Event::operator ==(const Event &other) const {
-	return this->cc == other.cc && this->mod == other.mod && this->utf8 == other.utf8;
 }
 
 
 int event_hash::operator()(const Event &e) const {
-	return class_code_hash()(e.cc); // ^ std::hash<modset_t>()(e.mod) * 3664657;
+	return class_code_hash()(e.cc)
+	       ^ std::hash<int>()(e.mod_code)
+	       ^ std::hash<int>()(e.state);
 }
 
 
-int event_class_hash::operator()(const event_class& c) const {
-	return std::hash<int>()(static_cast<int>(c));
-}
-
-
-int modifier_hash::operator()(const modifier &m) const {
-	return std::hash<int>()(static_cast<int>(m));
-}
-
-
-int class_code_hash::operator()(const ClassCode &e) const {
-	return event_class_hash()(e.eclass) ^
-	       std::hash<int>()(e.code) * 3664657;
-}
-
-
-modset_t sdl_mod(SDL_Keymod mod) {
-	// Remove modifiers like num lock and caps lock
-	// mod = static_cast<SDL_Keymod>(mod & this->used_keymods);
-	modset_t result;
-	if (mod & KMOD_CTRL) {
-		result.emplace(modifier::CTRL);
-	}
-	if (mod & KMOD_SHIFT) {
-		result.emplace(modifier::SHIFT);
-	}
-	if (mod & KMOD_ALT) {
-		result.emplace(modifier::ALT);
-	}
-	return result;
-}
-
-
-Event sdl_key(SDL_Keycode code, SDL_Keymod mod) {
-
-	// sdl values for non printable keys
-	if (code & (1 << 30)) {
-		return Event(event_class::OTHER, code, sdl_mod(mod));
-	}
-	else {
-		event_class ec;
-		char c = (code & 0xff);
-		if (isdigit(c)) {
-			ec = event_class::DIGIT;
-		}
-		else if (isalpha(c)) {
-			ec = event_class::ALPHA;
-		}
-		else if (isprint(c)) {
-			ec = event_class::PRINT;
-		}
-		else {
-			ec = event_class::NONPRINT;
-		}
-		return Event(ec, code, sdl_mod(mod));
-	}
-}
-
-Event utf8(const std::string &text) {
-	return Event(event_class::UTF8, text, modset_t());
-}
-
-Event sdl_mouse(int button, SDL_Keymod mod) {
-	return Event(event_class::MOUSE_BUTTON, button, sdl_mod(mod));
-}
-
-Event sdl_mouse_up_down(int button, bool up, SDL_Keymod mod) {
-	return Event(up ? event_class::MOUSE_BUTTON_UP : event_class::MOUSE_BUTTON_DOWN, button, sdl_mod(mod));
-}
-
-Event sdl_wheel(int direction, SDL_Keymod mod) {
-	return Event(event_class::MOUSE_WHEEL, direction, sdl_mod(mod));
-}
-
-
-} // openage::input
+} // namespace openage::input

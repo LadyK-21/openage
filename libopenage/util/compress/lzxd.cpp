@@ -1,7 +1,7 @@
 // This file was adapted from cabextract/libmspack <http://www.cabextract.org.uk/>,
 // Copyright 2003-2013 the cabextract contributors.
 // It's licensed under the terms of the GNU Library General Public License version 2.
-// Modifications Copyright 2014-2019 the openage authors.
+// Modifications Copyright 2014-2023 the openage authors.
 // See copying.md for further legal info.
 
 /*
@@ -35,14 +35,14 @@ namespace openage::util::compress {
 constexpr unsigned LZX_MIN_MATCH = 2;
 //constexpr unsigned LZX_MAX_MATCH = 257;             // seems to be unused. I'm scared.
 constexpr unsigned LZX_NUM_CHARS = 256;
-constexpr unsigned LZX_BLOCKTYPE_INVALID = 0;         // also blocktypes 4-7 invalid
+constexpr unsigned LZX_BLOCKTYPE_INVALID = 0; // also blocktypes 4-7 invalid
 constexpr unsigned LZX_BLOCKTYPE_VERBATIM = 1;
 constexpr unsigned LZX_BLOCKTYPE_ALIGNED = 2;
 constexpr unsigned LZX_BLOCKTYPE_UNCOMPRESSED = 3;
 constexpr unsigned LZX_PRETREE_NUM_ELEMENTS = 20;
 constexpr unsigned LZX_ALIGNED_NUM_ELEMENTS = 8;
-constexpr unsigned LZX_NUM_PRIMARY_LENGTHS = 7;       // missing from spec!
-constexpr unsigned LZX_NUM_SECONDARY_LENGTHS = 249;   // length tree #elements
+constexpr unsigned LZX_NUM_PRIMARY_LENGTHS = 7; // missing from spec!
+constexpr unsigned LZX_NUM_SECONDARY_LENGTHS = 249; // length tree #elements
 
 // LZX huffman constants: tweak tablebits as desired
 constexpr unsigned LZX_PRETREE_MAXSYMBOLS = LZX_PRETREE_NUM_ELEMENTS;
@@ -53,7 +53,7 @@ constexpr unsigned LZX_LENGTH_MAXSYMBOLS = LZX_NUM_SECONDARY_LENGTHS + 1;
 constexpr unsigned LZX_LENGTH_TABLEBITS = 12;
 constexpr unsigned LZX_ALIGNED_MAXSYMBOLS = LZX_ALIGNED_NUM_ELEMENTS;
 constexpr unsigned LZX_ALIGNED_TABLEBITS = 7;
-constexpr unsigned LZX_LENTABLE_SAFETY = 64;          // table decoding overruns are allowed
+constexpr unsigned LZX_LENTABLE_SAFETY = 64; // table decoding overruns are allowed
 
 
 /*
@@ -75,21 +75,13 @@ constexpr unsigned LZX_LENTABLE_SAFETY = 64;          // table decoding overruns
  */
 
 static const unsigned position_base[] = {
-	0, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256,
-	384, 512, 768, 1024, 1536, 2048, 3072, 4096, 6144, 8192, 12288,
-	16384, 24576, 32768, 49152, 65536, 98304, 131072, 196608, 262144,
-	393216, 524288, 655360, 786432, 917504, 1048576, 1179648, 1310720,
-	1441792, 1572864, 1703936, 1835008, 1966080, 2097152
-};
+	0, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 24576, 32768, 49152, 65536, 98304, 131072, 196608, 262144, 393216, 524288, 655360, 786432, 917504, 1048576, 1179648, 1310720, 1441792, 1572864, 1703936, 1835008, 1966080, 2097152};
 
 static const unsigned char extra_bits[] = {
-	0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8,
-	9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16,
-	17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17
-};
+	0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17};
 
 
-template<unsigned int maxsymbols_p, unsigned int tablebits_p, bool allow_empty=false>
+template <unsigned int maxsymbols_p, unsigned int tablebits_p, bool allow_empty = false>
 class HuffmanTable {
 private:
 	class LZXDStream *lzx;
@@ -119,7 +111,8 @@ public:
 	 */
 	bool is_empty;
 
-	explicit HuffmanTable(class LZXDStream *lzx) : lzx{lzx}, is_empty{true} {}
+	explicit HuffmanTable(class LZXDStream *lzx) :
+		lzx{lzx}, is_empty{true} {}
 
 	/**
 	 * Decodes the next huffman symbol from the input bitstream,
@@ -153,26 +146,26 @@ private:
 
 class LZXDStream {
 public:
-	ssize_t          output_pos;        // number of output bytes
+	ssize_t output_pos; // number of output bytes
 
-	unsigned char   *window;            // decoding window
-	unsigned int     window_size;       // window size
-	unsigned int     window_posn;       // decompression offset within window
-	unsigned int     frame_posn;        // current frame offset within in window
-	unsigned int     frame;             // the number of 32kb frames processed
-	unsigned int     reset_interval;    // which frame do we reset the compressor?
+	unsigned char *window; // decoding window
+	unsigned int window_size; // window size
+	unsigned int window_posn; // decompression offset within window
+	unsigned int frame_posn; // current frame offset within in window
+	unsigned int frame; // the number of 32kb frames processed
+	unsigned int reset_interval; // which frame do we reset the compressor?
 
-	unsigned int     R0, R1, R2;        // for the LRU offset system
-	unsigned int     block_length;      // uncompressed length of this LZX block
-	unsigned int     block_remaining;   // uncompressed bytes still left to decode
+	unsigned int R0, R1, R2; // for the LRU offset system
+	unsigned int block_length; // uncompressed length of this LZX block
+	unsigned int block_remaining; // uncompressed bytes still left to decode
 
-	signed int       e8_magic;          // magic value that's used by the intel E8 transform.
-	                                    // this field is read from the first 33 bits of the stream
-	                                    // after reset, and called intel_filesize in libmspack.
-	bool             header_read;       // indicates whether the e8_magic header has been read.
+	signed int e8_magic; // magic value that's used by the intel E8 transform.
+		// this field is read from the first 33 bits of the stream
+		// after reset, and called intel_filesize in libmspack.
+	bool header_read; // indicates whether the e8_magic header has been read.
 
-	unsigned char    block_type;        // type of the current block
-	unsigned char    posn_slots;        // how many posn slots in stream?
+	unsigned char block_type; // type of the current block
+	unsigned char posn_slots; // how many posn slots in stream?
 
 	// IO buffering
 	BitStream<4096> bits;
@@ -189,11 +182,12 @@ public:
 
 	LZXDStream(const LZXDStream &other) = delete;
 	LZXDStream(LZXDStream &&other) = delete;
-	LZXDStream &operator =(const LZXDStream &other) = delete;
-	LZXDStream &operator =(LZXDStream &&other) = delete;
+	LZXDStream &operator=(const LZXDStream &other) = delete;
+	LZXDStream &operator=(LZXDStream &&other) = delete;
 
 	/** See the doc for LZXDecompressor::decompress_next_frame in lzxd.h */
 	unsigned decompress_next_frame(unsigned char *output_buf);
+
 private:
 	/**
 	 * Initializes the next block.
@@ -230,12 +224,13 @@ private:
 	 * What the hell, Microsoft?
 	 */
 	void postprocess_intel_e8(unsigned char *output_buf, int frame_size);
+
 public:
 	void reset_state();
 };
 
 
-template<unsigned int maxsymbols_p, unsigned int tablebits_p, bool allow_empty>
+template <unsigned int maxsymbols_p, unsigned int tablebits_p, bool allow_empty>
 int HuffmanTable<maxsymbols_p, tablebits_p, allow_empty>::read_sym() {
 	lzx->bits.ensure_bits(HUFF_MAXBITS);
 	uint16_t sym = table[lzx->bits.peek_bits(tablebits)];
@@ -243,7 +238,7 @@ int HuffmanTable<maxsymbols_p, tablebits_p, allow_empty>::read_sym() {
 	unsigned i = 1 << (sizeof(lzx->bits.bit_buffer) * 8 - tablebits);
 	while (sym >= maxsymbols) {
 		// huff_traverse
-		if (unlikely((i >>= 1) == 0)) {
+		if ((i >>= 1) == 0) [[unlikely]] {
 			throw Error(MSG(err) << "huff_error in huff_traverse");
 		}
 		sym = table[(sym << 1) | ((lzx->bits.bit_buffer & i) ? 1 : 0)];
@@ -254,29 +249,31 @@ int HuffmanTable<maxsymbols_p, tablebits_p, allow_empty>::read_sym() {
 }
 
 
-template<unsigned int maxsymbols_p, unsigned int tablebits_p, bool allow_empty>
+template <unsigned int maxsymbols_p, unsigned int tablebits_p, bool allow_empty>
 void HuffmanTable<maxsymbols_p, tablebits_p, allow_empty>::make_decode_table() {
 	if (this->try_make_decode_table()) {
 		this->is_empty = false;
-	} else {
+	}
+	else {
 		if (allow_empty) {
 			// allow an empty tree, but don't decode symbols with it
 
 			// if any of the symbols has a greater-than-zero length, fail.
 			for (unsigned int i = 0; i < maxsymbols; i++) {
-				if (unlikely(this->len[i] > 0)) {
+				if (this->len[i] > 0) [[unlikely]] {
 					throw Error(MSG(err) << "failed to build HuffmanTable<allow_empty=true>");
 				}
 			}
 			this->is_empty = true;
-		} else {
+		}
+		else {
 			throw Error(MSG(err) << "failed to build HuffmanTable<allow_empty=false>");
 		}
 	}
 }
 
 
-template<unsigned int maxsymbols_p, unsigned int tablebits_p, bool allow_empty>
+template <unsigned int maxsymbols_p, unsigned int tablebits_p, bool allow_empty>
 bool HuffmanTable<maxsymbols_p, tablebits_p, allow_empty>::try_make_decode_table() {
 	uint16_t sym, next_symbol;
 	unsigned int leaf, fill;
@@ -333,14 +330,14 @@ bool HuffmanTable<maxsymbols_p, tablebits_p, allow_empty>::try_make_decode_table
 			for (fill = 0; fill < (bit_num - tablebits); fill++) {
 				// if this path hasn't been taken yet, 'allocate' two entries
 				if (table[leaf] == 0xFFFF) {
-						table[(next_symbol << 1) + 0] = 0xFFFF;
-						table[(next_symbol << 1) + 1] = 0xFFFF;
-						table[leaf] = next_symbol++;
+					table[(next_symbol << 1) + 0] = 0xFFFF;
+					table[(next_symbol << 1) + 1] = 0xFFFF;
+					table[leaf] = next_symbol++;
 				}
 
 				// follow the path and select either left or right for next bit
 				leaf = table[leaf] << 1;
-				if ((pos >> (15-fill)) & 1)
+				if ((pos >> (15 - fill)) & 1)
 					leaf++;
 			}
 			table[leaf] = sym;
@@ -359,7 +356,7 @@ bool HuffmanTable<maxsymbols_p, tablebits_p, allow_empty>::try_make_decode_table
 }
 
 
-template<unsigned int maxsymbols_p, unsigned int tablebits_p, bool allow_empty>
+template <unsigned int maxsymbols_p, unsigned int tablebits_p, bool allow_empty>
 void HuffmanTable<maxsymbols_p, tablebits_p, allow_empty>::read_lengths(unsigned int first, unsigned int last) {
 	// bit buffer and huffman symbol decode variables
 	unsigned int x, y;
@@ -372,7 +369,7 @@ void HuffmanTable<maxsymbols_p, tablebits_p, allow_empty>::read_lengths(unsigned
 
 	lzx->htpre.make_decode_table();
 
-	for (x = first; x < last; ) {
+	for (x = first; x < last;) {
 		z = lzx->htpre.read_sym();
 		if (z == 17) {
 			// code = 17, run of ([read 4 bits]+4) zeros
@@ -417,20 +414,18 @@ void HuffmanTable<maxsymbols_p, tablebits_p, allow_empty>::read_lengths(unsigned
 
 LZXDStream::LZXDStream(read_callback_t read_callback,
                        unsigned int window_bits,
-                       unsigned int reset_interval)
-		:
-		output_pos{0},
-		window_size{static_cast<unsigned int>(1) << window_bits},
-		window_posn{0},
-		frame_posn{0},
-		frame{0},
-		reset_interval{reset_interval},
-		bits{std::move(read_callback)},
-		htpre{this},
-		htmain{this},
-		htlength{this},
-		htaligned{this} {
-
+                       unsigned int reset_interval) :
+	output_pos{0},
+	window_size{static_cast<unsigned int>(1) << window_bits},
+	window_posn{0},
+	frame_posn{0},
+	frame{0},
+	reset_interval{reset_interval},
+	bits{std::move(read_callback)},
+	htpre{this},
+	htmain{this},
+	htlength{this},
+	htaligned{this} {
 	// LZX supports window sizes of 2^15 (32 KiB) through 2^21 (2 MiB)
 	if (window_bits < 15 || window_bits > 21) {
 		throw Error(MSG(err) << "Bad requested window size: 2^" << window_bits << " bytes");
@@ -540,7 +535,7 @@ int LZXDStream::decode_symbol_from_verbatim_block() {
 	// get match length
 	int match_length = main_element & LZX_NUM_PRIMARY_LENGTHS;
 	if (match_length == LZX_NUM_PRIMARY_LENGTHS) {
-		if (unlikely(this->htlength.is_empty)) {
+		if (this->htlength.is_empty) [[unlikely]] {
 			throw Error(MSG(err) << "decrunch: LENGTH symbol needed byt tree is empty");
 		}
 		int length_footer = this->htlength.read_sym();
@@ -579,7 +574,7 @@ int LZXDStream::decode_symbol_from_verbatim_block() {
 		this->R0 = match_offset;
 	}
 
-	if (unlikely((this->window_posn + match_length) > this->window_size)) {
+	if ((this->window_posn + match_length) > this->window_size) [[unlikely]] {
 		throw Error(MSG(err) << "decrunch: match ran over window wrap");
 	}
 
@@ -590,7 +585,7 @@ int LZXDStream::decode_symbol_from_verbatim_block() {
 	if (match_offset > this->window_posn) {
 		// j = length from match offset to end of window
 		int j = match_offset - this->window_posn;
-		if (unlikely(j > (int) this->window_size)) {
+		if (j > (int)this->window_size) [[unlikely]] {
 			throw Error(MSG(err) << "decrunch: match offset beyond window boundaries");
 		}
 		unsigned char *runsrc = &window[this->window_size - j];
@@ -605,7 +600,8 @@ int LZXDStream::decode_symbol_from_verbatim_block() {
 		while (i-- > 0) {
 			*rundest++ = *runsrc++;
 		}
-	} else {
+	}
+	else {
 		unsigned char *runsrc = rundest - match_offset;
 		while (i-- > 0) {
 			*rundest++ = *runsrc++;
@@ -613,7 +609,7 @@ int LZXDStream::decode_symbol_from_verbatim_block() {
 	}
 
 	this->window_posn += match_length;
-	return               match_length;
+	return match_length;
 }
 
 
@@ -631,7 +627,7 @@ int LZXDStream::decode_symbol_from_aligned_block() {
 	// get match length
 	int match_length = main_element & LZX_NUM_PRIMARY_LENGTHS;
 	if (match_length == LZX_NUM_PRIMARY_LENGTHS) {
-		if (unlikely(this->htlength.is_empty)) {
+		if (this->htlength.is_empty) [[unlikely]] {
 			throw Error(MSG(err) << "decrunch: length symbol needed byt tree is empty");
 		}
 		int length_footer = this->htlength.read_sym();
@@ -689,7 +685,7 @@ int LZXDStream::decode_symbol_from_aligned_block() {
 		this->R0 = match_offset;
 	}
 
-	if (unlikely((this->window_posn + match_length) > this->window_size)) {
+	if ((this->window_posn + match_length) > this->window_size) [[unlikely]] {
 		throw Error(MSG(err) << "decrunch: match ran over window wrap");
 	}
 
@@ -700,7 +696,7 @@ int LZXDStream::decode_symbol_from_aligned_block() {
 	if (match_offset > this->window_posn) {
 		// j = length from match offset to end of window
 		int j = match_offset - this->window_posn;
-		if (unlikely(j > (int) this->window_size)) {
+		if (j > (int)this->window_size) [[unlikely]] {
 			throw Error(MSG(err) << "decrunch: match offset beyond window boundaries");
 		}
 		unsigned char *runsrc = &window[this->window_size - j];
@@ -715,7 +711,8 @@ int LZXDStream::decode_symbol_from_aligned_block() {
 		while (i-- > 0) {
 			*rundest++ = *runsrc++;
 		}
-	} else {
+	}
+	else {
 		unsigned char *runsrc = rundest - match_offset;
 		while (i-- > 0) {
 			*rundest++ = *runsrc++;
@@ -723,7 +720,7 @@ int LZXDStream::decode_symbol_from_aligned_block() {
 	}
 
 	this->window_posn += match_length;
-	return               match_length;
+	return match_length;
 }
 
 
@@ -741,13 +738,13 @@ unsigned int LZXDStream::read_data_from_uncompressed_block(unsigned int size) {
 
 
 unsigned LZXDStream::decompress_next_frame(unsigned char *output_buf) {
-	if (unlikely(this->bits.eof)) {
+	if (this->bits.eof) [[unlikely]] {
 		return 0;
 	}
 
 	// have we reached the reset interval? (if there is one?)
-	if (unlikely(this->reset_interval && ((this->frame % this->reset_interval) == 0))) {
-		if (unlikely(this->block_remaining)) {
+	if (this->reset_interval && (this->frame % this->reset_interval) == 0) [[unlikely]] {
+		if (this->block_remaining) [[unlikely]] {
 			throw Error(MSG(err) << this->block_remaining << " bytes remaining at reset interval");
 		}
 
@@ -756,13 +753,14 @@ unsigned LZXDStream::decompress_next_frame(unsigned char *output_buf) {
 	}
 
 	// read header if necessary (after initializing or resetting the stream).
-	if (unlikely(!this->header_read)) {
+	if (!this->header_read) [[unlikely]] {
 		// the first bit of the header indicates whether the e8_magic field is present.
 		if (this->bits.read_bits(1)) {
 			// read e8_magic (32 bits).
 			this->e8_magic = this->bits.read_bits(16) << 16;
 			this->e8_magic |= this->bits.read_bits(16);
-		} else {
+		}
+		else {
 			// e8_magic is zero.
 			this->e8_magic = 0;
 		}
@@ -773,27 +771,33 @@ unsigned LZXDStream::decompress_next_frame(unsigned char *output_buf) {
 	// counter that stores the amount of data that has been accumulated for this frame.
 	unsigned int frame_size = 0;
 
-	if (unlikely(this->frame_posn - this->window_posn)) {
+	if (this->frame_posn - this->window_posn) [[unlikely]] {
 		// Warning: untested code.
 		// In theory, a symbol may have overshot the last frame's boundary.
 		// If it did, the amount of data would be available in frame_size.
 
-		throw Error(MSG(err) <<
-			"untested code path: extra frame data available from last frame. " <<
-			"frame size = " << this->frame_posn - this->window_posn);
+		throw Error(MSG(err) << "untested code path: extra frame data available from last frame. "
+		                     << "frame size = " << this->frame_posn - this->window_posn);
 	}
 
 	// decode symbols until we have enough data for the frame.
 	while (frame_size < LZX_FRAME_SIZE) {
 		// initialise next block, if one is needed
-		if (unlikely(this->block_remaining == 0)) {
+		if (this->block_remaining == 0) [[unlikely]] {
 			if (this->bits.eof) {
 				// EOF of input stream was reached at a block boundary.
 				// there are no more blocks. Return the frame as-is.
 				break;
 			}
 
-			this->init_next_block();
+			try {
+				this->init_next_block();
+			}
+			catch (Error &e) {
+				// next block is beyond end of input stream
+				// TODO: Figure out why this error happens
+				break;
+			}
 		}
 
 		unsigned int symbol_size;
@@ -812,7 +816,7 @@ unsigned LZXDStream::decompress_next_frame(unsigned char *output_buf) {
 			throw Error(MSG(err) << "this->blocktype neither verbatim nor aligned");
 		}
 
-		if (unlikely(symbol_size > this->block_remaining)) {
+		if (symbol_size > this->block_remaining) [[unlikely]] {
 			// we overshot the block boundary.
 			throw Error(MSG(err) << "decrunch: overrun went past end of block by " << symbol_size - this->block_remaining);
 		}
@@ -821,7 +825,7 @@ unsigned LZXDStream::decompress_next_frame(unsigned char *output_buf) {
 		frame_size += symbol_size;
 	}
 
-	if (unlikely(frame_size > LZX_FRAME_SIZE)) {
+	if (frame_size > LZX_FRAME_SIZE) [[unlikely]] {
 		// Warning: untested code.
 		// In theory, a symbol may overshoot a frame boundary. If it does, the data
 		// will get re-used in the next frame, but we have to limit frame_size to LZX_FRAME_SIZE.
@@ -833,7 +837,7 @@ unsigned LZXDStream::decompress_next_frame(unsigned char *output_buf) {
 	}
 
 	// streams don't extend over frame boundaries
-	if (unlikely(this->window_posn != this->frame_posn + frame_size)) {
+	if (this->window_posn != this->frame_posn + frame_size) [[unlikely]] {
 		throw Error(MSG(err) << "decrunch: decode beyond output frame limits");
 	}
 
@@ -891,22 +895,20 @@ void LZXDStream::postprocess_intel_e8(unsigned char *buf, int frame_size) {
 
 		// read the next 4 bytes as little endian
 		int32_t abs_offset =
-			(buf[pos + 1] <<  0) |
-			(buf[pos + 2] <<  8) |
-			(buf[pos + 3] << 16) |
-			(buf[pos + 4] << 24);
+			(buf[pos + 1] << 0) | (buf[pos + 2] << 8) | (buf[pos + 3] << 16) | (buf[pos + 4] << 24);
 
 		if (abs_offset >= -file_pos && abs_offset < this->e8_magic) {
 			int32_t rel_offset;
 			if (abs_offset >= 0) {
 				rel_offset = abs_offset - file_pos;
-			} else {
+			}
+			else {
 				rel_offset = abs_offset + this->e8_magic;
 			}
 
 			// write the next 4 bytes as little endian
-			buf[pos + 1] = static_cast<unsigned char>(rel_offset >>  0);
-			buf[pos + 2] = static_cast<unsigned char>(rel_offset >>  8);
+			buf[pos + 1] = static_cast<unsigned char>(rel_offset >> 0);
+			buf[pos + 2] = static_cast<unsigned char>(rel_offset >> 8);
 			buf[pos + 3] = static_cast<unsigned char>(rel_offset >> 16);
 			buf[pos + 4] = static_cast<unsigned char>(rel_offset >> 24);
 		}
@@ -919,8 +921,7 @@ void LZXDStream::postprocess_intel_e8(unsigned char *buf, int frame_size) {
 
 LZXDecompressor::LZXDecompressor(read_callback_t read_callback,
                                  unsigned int window_bits,
-                                 unsigned int reset_interval)
-	:
+                                 unsigned int reset_interval) :
 	stream{new LZXDStream{std::move(read_callback), window_bits, reset_interval}} {}
 
 
@@ -934,4 +935,4 @@ unsigned LZXDecompressor::decompress_next_frame(unsigned char *output_buf) {
 }
 
 
-} // openage::util::compress
+} // namespace openage::util::compress

@@ -1,4 +1,4 @@
-# Copyright 2020-2022 the openage authors. See copying.md for legal info.
+# Copyright 2020-2024 the openage authors. See copying.md for legal info.
 #
 # pylint: disable=too-many-public-methods,too-many-lines,too-many-locals
 # pylint: disable=too-many-branches,too-many-statements,too-many-arguments
@@ -19,7 +19,7 @@ import typing
 
 from .....nyan.nyan_structs import MemberSpecialValue
 from .....util.ordered_set import OrderedSet
-from ....entity_object.conversion.aoc.genie_unit import GenieVillagerGroup,\
+from ....entity_object.conversion.aoc.genie_unit import GenieVillagerGroup, \
     GenieStackBuildingGroup
 from ....entity_object.conversion.converter_object import RawAPIObject
 from ....service.conversion import internal_name_lookups
@@ -200,7 +200,7 @@ class SWGBCCAbilitySubprocessor:
                     AoCAbilitySubprocessor.create_civ_animation(line,
                                                                 civ_group,
                                                                 civ_animation_id,
-                                                                ability_ref,
+                                                                property_ref,
                                                                 obj_prefix,
                                                                 filename_prefix,
                                                                 obj_exists)
@@ -1225,16 +1225,16 @@ class SWGBCCAbilitySubprocessor:
         return ability_forward_ref
 
     @staticmethod
-    def hitbox_ability(line: GenieGameEntityGroup) -> ForwardRef:
+    def collision_ability(line: GenieGameEntityGroup) -> ForwardRef:
         """
-        Adds the Hitbox ability to a line.
+        Adds the Collision ability to a line.
 
         :param line: Unit/Building line that gets the ability.
         :type line: ...dataformat.converter_object.ConverterObjectGroup
         :returns: The forward reference for the ability.
         :rtype: ...dataformat.forward_ref.ForwardRef
         """
-        ability_forward_ref = AoCAbilitySubprocessor.hitbox_ability(line)
+        ability_forward_ref = AoCAbilitySubprocessor.collision_ability(line)
 
         # TODO: Implement diffing of civ lines
 

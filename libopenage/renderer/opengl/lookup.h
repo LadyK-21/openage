@@ -1,4 +1,4 @@
-// Copyright 2018-2018 the openage authors. See copying.md for legal info.
+// Copyright 2018-2024 the openage authors. See copying.md for legal info.
 
 // Lookup tables for translating between OpenGL-specific values and generic renderer values,
 // as well as mapping things like type sizes within OpenGL.
@@ -7,8 +7,9 @@
 
 #include <epoxy/gl.h>
 
-#include "../resources/texture_info.h"
-#include "../resources/mesh_data.h"
+#include "renderer/resources/buffer_info.h"
+#include "renderer/resources/mesh_data.h"
+#include "renderer/resources/texture_info.h"
 
 
 namespace openage {
@@ -24,15 +25,18 @@ static constexpr auto GL_PIXEL_FORMAT = datastructure::create_const_map<resource
 	std::pair(resources::pixel_format::bgr8, std::tuple(GL_RGB8, GL_BGR, GL_UNSIGNED_BYTE)),
 	std::pair(resources::pixel_format::rgba8, std::tuple(GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE)),
 	std::pair(resources::pixel_format::rgba8ui, std::tuple(GL_RGBA8UI, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE)),
-	std::pair(resources::pixel_format::depth24, std::tuple(GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE))
-);
+	std::pair(resources::pixel_format::depth24, std::tuple(GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE)));
 
 /// Sizes of various uniform/vertex input types in shaders.
-static constexpr auto GL_SHADER_TYPE_SIZE = datastructure::create_const_map<GLenum, size_t>(
+static constexpr auto GL_UNIFORM_TYPE_SIZE = datastructure::create_const_map<GLenum, size_t>(
 	std::pair(GL_FLOAT, 4),
 	std::pair(GL_FLOAT_VEC2, 8),
 	std::pair(GL_FLOAT_VEC3, 12),
 	std::pair(GL_FLOAT_VEC4, 16),
+	std::pair(GL_DOUBLE, 8),
+	std::pair(GL_DOUBLE_VEC2, 16),
+	std::pair(GL_DOUBLE_VEC3, 24),
+	std::pair(GL_DOUBLE_VEC4, 32),
 	std::pair(GL_INT, 4),
 	std::pair(GL_INT_VEC2, 8),
 	std::pair(GL_INT_VEC3, 12),
@@ -52,11 +56,10 @@ static constexpr auto GL_SHADER_TYPE_SIZE = datastructure::create_const_map<GLen
 	std::pair(GL_SAMPLER_2D, 4),
 	std::pair(GL_SAMPLER_2D_ARRAY, 4),
 	std::pair(GL_SAMPLER_3D, 4),
-	std::pair(GL_SAMPLER_CUBE, 4)
-);
+	std::pair(GL_SAMPLER_CUBE, 4));
 
 /// GL types with corresponding GLSL type strings.
-static constexpr auto GLSL_TYPE_NAME = datastructure::create_const_map<GLenum, const char*>(
+static constexpr auto GLSL_TYPE_NAME = datastructure::create_const_map<GLenum, const char *>(
 	std::pair(GL_FLOAT, "float"),
 	std::pair(GL_FLOAT_VEC2, "vec2"),
 	std::pair(GL_FLOAT_VEC3, "vec3"),
@@ -117,40 +120,60 @@ static constexpr auto GLSL_TYPE_NAME = datastructure::create_const_map<GLenum, c
 	std::pair(GL_UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE, "usampler2DMS"),
 	std::pair(GL_UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE_ARRAY, "usampler2DMSArray"),
 	std::pair(GL_UNSIGNED_INT_SAMPLER_BUFFER, "usamplerBuffer"),
-	std::pair(GL_UNSIGNED_INT_SAMPLER_2D_RECT, "usampler2DRect")
-);
+	std::pair(GL_UNSIGNED_INT_SAMPLER_2D_RECT, "usampler2DRect"));
 
 /// Generic vertex input types from GL types.
 static constexpr auto GL_VERT_IN_TYPE = datastructure::create_const_map<GLenum, resources::vertex_input_t>(
 	std::pair(GL_FLOAT, resources::vertex_input_t::F32),
 	std::pair(GL_FLOAT_VEC2, resources::vertex_input_t::V2F32),
 	std::pair(GL_FLOAT_VEC3, resources::vertex_input_t::V3F32),
-	std::pair(GL_FLOAT_MAT3, resources::vertex_input_t::M3F32)
-);
+	std::pair(GL_FLOAT_MAT3, resources::vertex_input_t::M3F32));
 
 /// The type of a single element in a per-vertex attribute.
 static constexpr auto GL_VERT_IN_ELEM_TYPE = datastructure::create_const_map<resources::vertex_input_t, GLenum>(
 	std::pair(resources::vertex_input_t::F32, GL_FLOAT),
 	std::pair(resources::vertex_input_t::V2F32, GL_FLOAT),
 	std::pair(resources::vertex_input_t::V3F32, GL_FLOAT),
-	std::pair(resources::vertex_input_t::M3F32, GL_FLOAT)
-);
+	std::pair(resources::vertex_input_t::M3F32, GL_FLOAT));
 
 /// Mapping from generic primitive types to GL types.
 static constexpr auto GL_PRIMITIVE = datastructure::create_const_map<resources::vertex_primitive_t, GLenum>(
 	std::pair(resources::vertex_primitive_t::POINTS, GL_POINTS),
 	std::pair(resources::vertex_primitive_t::LINES, GL_LINES),
 	std::pair(resources::vertex_primitive_t::LINE_STRIP, GL_LINE_STRIP),
+	std::pair(resources::vertex_primitive_t::LINE_LOOP, GL_LINE_LOOP),
 	std::pair(resources::vertex_primitive_t::TRIANGLES, GL_TRIANGLES),
 	std::pair(resources::vertex_primitive_t::TRIANGLE_STRIP, GL_TRIANGLE_STRIP),
-	std::pair(resources::vertex_primitive_t::TRIANGLE_FAN, GL_TRIANGLE_FAN)
-);
+	std::pair(resources::vertex_primitive_t::TRIANGLE_FAN, GL_TRIANGLE_FAN));
 
 /// Mapping from generic index types to GL types.
 static constexpr auto GL_INDEX_TYPE = datastructure::create_const_map<resources::index_t, GLenum>(
 	std::pair(resources::index_t::U8, GL_UNSIGNED_BYTE),
 	std::pair(resources::index_t::U16, GL_UNSIGNED_SHORT),
-	std::pair(resources::index_t::U32, GL_UNSIGNED_INT)
-);
+	std::pair(resources::index_t::U32, GL_UNSIGNED_INT));
 
-}}} // openage::renderer::opengl
+/// Mapping from generic index types to their size in bytes.
+static constexpr auto GL_INDEX_SIZE = datastructure::create_const_map<resources::index_t, size_t>(
+	std::pair(resources::index_t::U8, 1),
+	std::pair(resources::index_t::U16, 2),
+	std::pair(resources::index_t::U32, 4));
+
+static constexpr auto GL_UBO_INPUT_TYPE = datastructure::create_const_map<resources::ubo_input_t, GLenum>(
+	std::pair(resources::ubo_input_t::F32, GL_FLOAT),
+	std::pair(resources::ubo_input_t::I32, GL_INT),
+	std::pair(resources::ubo_input_t::U32, GL_UNSIGNED_INT),
+	std::pair(resources::ubo_input_t::BOOL, GL_BOOL),
+	std::pair(resources::ubo_input_t::V2F32, GL_FLOAT_VEC2),
+	std::pair(resources::ubo_input_t::V3F32, GL_FLOAT_VEC3),
+	std::pair(resources::ubo_input_t::V4F32, GL_FLOAT_VEC4),
+	std::pair(resources::ubo_input_t::V2I32, GL_INT_VEC2),
+	std::pair(resources::ubo_input_t::V3I32, GL_INT_VEC3),
+	std::pair(resources::ubo_input_t::V4I32, GL_INT_VEC4),
+	std::pair(resources::ubo_input_t::V2U32, GL_UNSIGNED_INT_VEC2),
+	std::pair(resources::ubo_input_t::V3U32, GL_UNSIGNED_INT_VEC3),
+	std::pair(resources::ubo_input_t::V4U32, GL_UNSIGNED_INT_VEC4),
+	std::pair(resources::ubo_input_t::M4F32, GL_FLOAT_MAT4));
+
+} // namespace opengl
+} // namespace renderer
+} // namespace openage

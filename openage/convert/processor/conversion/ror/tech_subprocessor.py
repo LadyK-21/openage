@@ -1,4 +1,4 @@
-# Copyright 2020-2022 the openage authors. See copying.md for legal info.
+# Copyright 2020-2023 the openage authors. See copying.md for legal info.
 #
 # pylint: disable=too-many-locals,too-many-branches
 #
@@ -12,7 +12,7 @@ from __future__ import annotations
 import typing
 
 from .....nyan.nyan_structs import MemberOperator
-from ....entity_object.conversion.aoc.genie_unit import GenieBuildingLineGroup,\
+from ....entity_object.conversion.aoc.genie_unit import GenieBuildingLineGroup, \
     GenieUnitLineGroup
 from ....service.conversion import internal_name_lookups
 from ..aoc.upgrade_ability_subprocessor import AoCUpgradeAbilitySubprocessor
@@ -120,7 +120,7 @@ class RoRTechSubprocessor:
             operator = MemberOperator.MULTIPLY
 
         else:
-            raise Exception(f"Effect type {effect_type} is not a valid attribute effect")
+            raise TypeError(f"Effect type {effect_type} is not a valid attribute effect")
 
         unit_id = effect["attr_a"].value
         class_id = effect["attr_b"].value
@@ -190,7 +190,7 @@ class RoRTechSubprocessor:
             operator = MemberOperator.MULTIPLY
 
         else:
-            raise Exception(f"Effect type {effect_type} is not a valid resource effect")
+            raise TypeError(f"Effect type {effect_type} is not a valid resource effect")
 
         resource_id = effect["attr_a"].value
         value = effect["attr_d"].value

@@ -1,10 +1,11 @@
-# Copyright 2020-2022 the openage authors. See copying.md for legal info.
+# Copyright 2020-2024 the openage authors. See copying.md for legal info.
 #
 # pylint: disable=too-many-arguments
 
 """
 Stores information about base game editions and expansions.
 """
+from __future__ import annotations
 
 from dataclasses import dataclass
 import enum
@@ -31,15 +32,15 @@ class GameBase:
     def __init__(
         self,
         game_id: str,
-        support: bool,
+        support: Support,
         game_version_info: list[tuple[list[str], dict[str, str]]],
         media_paths: list[tuple[str, list[str]]],
-        modpacks: list[str],
+        modpacks: dict[str, dict[str, str]],
         **flags
     ):
         """
         :param game_id: Unique id for the given game.
-        :type_param: str
+        :type game_id: str
         :param support: Whether the converter can read/convert
                                the game to openage formats.
         :type support: str
@@ -96,6 +97,18 @@ class GameBase:
         """
         self.media_paths[MediaType[media_type.upper()]] = paths
 
+    def __eq__(self, other: GameBase) -> bool:
+        """
+        Compare equality by comparing IDs.
+        """
+        return self.game_id == other.game_id
+
+    def __hash__(self) -> int:
+        """
+        Reimplement hash to only consider the game ID.
+        """
+        return hash(self.game_id)
+
 
 class GameExpansion(GameBase):
     """
@@ -106,7 +119,7 @@ class GameExpansion(GameBase):
         self,
         name: str,
         game_id: str,
-        support: bool,
+        support: Support,
         game_version_info: list[tuple[list[str], dict[str, str]]],
         media_paths: list[tuple[str, list[str]]],
         modpacks: list[str],
@@ -147,9 +160,10 @@ class GameEdition(GameBase):
         self,
         name: str,
         game_id: str,
-        support: bool,
+        support: Support,
         game_version_info: list[tuple[list[str], dict[str, str]]],
         media_paths: list[tuple[str, list[str]]],
+        install_paths: dict[str, list[str]],
         modpacks: list[str],
         expansions: list[str],
         **flags
@@ -171,8 +185,9 @@ class GameEdition(GameBase):
             **flags
         )
 
+        self.install_paths = install_paths
         self.edition_name = name
-        self.expansions = expansions
+        self.expansions = tuple(expansions)
 
     def __str__(self):
         return self.edition_name

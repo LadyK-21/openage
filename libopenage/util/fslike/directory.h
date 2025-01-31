@@ -1,4 +1,4 @@
-// Copyright 2017-2019 the openage authors. See copying.md for legal info.
+// Copyright 2017-2024 the openage authors. See copying.md for legal info.
 
 #pragma once
 
@@ -23,7 +23,7 @@ namespace fslike {
  */
 class Directory : public FSLike {
 public:
-	Directory(std::string basepath, bool create_if_missing=false);
+	Directory(std::string basepath, bool create_if_missing = false);
 
 	bool is_file(const Path::parts_t &parts) override;
 	bool is_dir(const Path::parts_t &parts) override;
@@ -48,6 +48,8 @@ public:
 
 	std::ostream &repr(std::ostream &) override;
 
+	static Directory get_temp_directory();
+
 protected:
 	/**
 	 * resolve the path to an actually usable one.
@@ -59,5 +61,6 @@ protected:
 
 	std::string basepath;
 };
-
-}}} // openage::util::fslike
+} // namespace fslike
+} // namespace util
+} // namespace openage

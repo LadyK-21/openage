@@ -130,7 +130,7 @@ the ability with this property cannot become active.
 ## ability.type.ActiveTransformTo
 
 ```python
-TransformTo(Ability):
+ActiveTransformTo(Ability):
     target_state       : StateChanger
     transform_time     : float
     transform_progress : set(Progress)
@@ -146,6 +146,18 @@ The time for the transformation to complete.
 
 **transform_progress**
 A set of `Progress` objects that can activate state changes and animation overrides while the transformation progresses. The objects in the set must have progress type `Restock`.
+
+## ability.type.Activity
+
+```python
+Activity(Ability):
+    graph: Activity
+```
+
+Defines the behaviour of a game entity. The behaviour is modelled as a directed node graph. Nodes in the graph correspond to actions that execute for the game entity or conditional queries and event triggers that indicate which path to take next. By traversing the node graph along its paths, the game entities actions are determined. See the [activity control flow](/doc/code/game_simulation/activity.md) documentation for more information.
+
+**graph**
+Node graph that defines the behaviour of the game entity.
 
 ## ability.type.ApplyContinuousEffect
 
@@ -246,6 +258,18 @@ Container the target game entity will be inserted into. A `Storage` ability with
 
 **storage_elements**
 Game entities that can be inserted into the container. The container must allow the `GameEntity` objects.
+
+## ability.type.Collision
+
+```python
+Collision(Ability):
+    hitbox : Hitbox
+```
+
+Adds collision behaviour to a game entity.
+
+**hitbox**
+Defines the size (x, y, z) of the collision hitbox.
 
 ## ability.type.Constructable
 
@@ -555,18 +579,6 @@ When other herdables are in this range around the herded game entity, they will 
 **mode**
 Determines who gets ownership of the herdable game entity when multiple game entities using `Herd` are in range.
 
-## ability.type.Hitbox
-
-```python
-Hitbox(Ability):
-    hitbox : Hitbox
-```
-
-Adds a hitbox to a game entity that is used for collision with other game entities.
-
-**hitbox**
-Defines the size (x, y, z) of the hitbox.
-
 ## ability.type.Idle
 
 ```python
@@ -616,8 +628,9 @@ Lock pools definitions.
 
 ```python
 Move(Ability):
-    speed : float
-    modes : set(MoveMode)
+    speed      : float
+    modes      : set(MoveMode)
+    path_type  : children(PathType)
 ```
 
 Allows a game entity to move around the map.
@@ -626,7 +639,10 @@ Allows a game entity to move around the map.
 Speed of movement.
 
 **modes**
-Type of movements that can be used.
+Modes of movements that can be used.
+
+**path_type**
+Path type determining which pathfinding grid is searched to find a path from the start to the goal location.
 
 ## ability.type.Named
 
@@ -660,22 +676,6 @@ Temporarily replace the map terrain the game entity is positioned on with a spec
 **terrain_overlay**
 Terrain that is temporily replaces the existing map terrain.
 
-## ability.type.Passable
-
-```python
-Passable(Ability):
-    hitbox : Hitbox
-    mode   : PassableMode
-```
-
-Deactivates a specified hitbox of the game entity for movement of other game entities. The hitbox is still relevant for the game entity's own movement.
-
-**hitbox**
-Reference to the hitbox that should be deactivated.
-
-**mode**
-Defines the game entities for which the hitbox is deactivated.
-
 ## ability.type.PassiveTransformTo
 
 ```python
@@ -699,6 +699,28 @@ State change activated after `transform_time` has passed.
 
 **transform_progress**
 Can alter the game entity while the transformation is in progress. The objects in the set must have progress type `Transform`.
+
+## ability.type.Pathable
+
+```python
+Pathable(Ability):
+    hitbox     : Hitbox
+    path_costs : dict(children(PathType), int)
+```
+
+Lets a game entity influence the pathing costs on the (static) pathfinding grid.
+
+This ability should only be used for game entitie that never (or rarely) change positions as pathfinding grid recalculations are expensive. For dynamic pathfinding effects, using the `Collision` ability should be preferred.
+
+**hitbox**
+Hitbox around the game entity that affects the underlying pathfinding grids. All grid cells that are covered by this hitbox ae influenced by the cost definitions in the `path_costs` attribute.
+
+**path_costs**
+Costs of traversing the area defined by the `hitbox` attribute on the pathfinding grid.
+
+Keys are `PathType` objects that are associated with a pathfinding grid in the pathfinder.
+
+Values represent the pathing cost for the terrain on the pathfinding grid. Each value must be an integer between `1` and `255`. `1` defines the *minimum* possible cost and `254` represents the *maximum* possible cost. `255` signifies that the terrain is impassable for the specified path type.
 
 ## ability.type.ProductionQueue
 

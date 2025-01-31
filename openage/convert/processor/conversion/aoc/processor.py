@@ -1,4 +1,4 @@
-# Copyright 2019-2022 the openage authors. See copying.md for legal info.
+# Copyright 2019-2024 the openage authors. See copying.md for legal info.
 #
 # pylint: disable=too-many-lines,too-many-branches,too-many-statements
 # pylint: disable=too-many-locals,too-many-public-methods
@@ -12,35 +12,35 @@ import typing
 from .....log import info
 from ....entity_object.conversion.aoc.genie_civ import GenieCivilizationGroup
 from ....entity_object.conversion.aoc.genie_civ import GenieCivilizationObject
-from ....entity_object.conversion.aoc.genie_connection import GenieAgeConnection,\
+from ....entity_object.conversion.aoc.genie_connection import GenieAgeConnection, \
     GenieBuildingConnection, GenieUnitConnection, GenieTechConnection
-from ....entity_object.conversion.aoc.genie_effect import GenieEffectObject,\
+from ....entity_object.conversion.aoc.genie_effect import GenieEffectObject, \
     GenieEffectBundle
 from ....entity_object.conversion.aoc.genie_graphic import GenieGraphic
 from ....entity_object.conversion.aoc.genie_object_container import GenieObjectContainer
 from ....entity_object.conversion.aoc.genie_sound import GenieSound
-from ....entity_object.conversion.aoc.genie_tech import AgeUpgrade,\
+from ....entity_object.conversion.aoc.genie_tech import AgeUpgrade, \
     UnitUnlock, UnitLineUpgrade, CivBonus
 from ....entity_object.conversion.aoc.genie_tech import BuildingLineUpgrade
 from ....entity_object.conversion.aoc.genie_tech import GenieTechObject
-from ....entity_object.conversion.aoc.genie_tech import StatUpgrade, InitiatedTech,\
+from ....entity_object.conversion.aoc.genie_tech import StatUpgrade, InitiatedTech, \
     BuildingUnlock
-from ....entity_object.conversion.aoc.genie_terrain import GenieTerrainGroup
-from ....entity_object.conversion.aoc.genie_terrain import GenieTerrainObject
-from ....entity_object.conversion.aoc.genie_unit import GenieAmbientGroup,\
+from ....entity_object.conversion.aoc.genie_terrain import GenieTerrainGroup, \
+    GenieTerrainObject, GenieTerrainRestriction
+from ....entity_object.conversion.aoc.genie_unit import GenieAmbientGroup, \
     GenieGarrisonMode
-from ....entity_object.conversion.aoc.genie_unit import GenieStackBuildingGroup,\
+from ....entity_object.conversion.aoc.genie_unit import GenieStackBuildingGroup, \
     GenieBuildingLineGroup
-from ....entity_object.conversion.aoc.genie_unit import GenieUnitLineGroup,\
+from ....entity_object.conversion.aoc.genie_unit import GenieUnitLineGroup, \
     GenieUnitTransformGroup, GenieMonkGroup
 from ....entity_object.conversion.aoc.genie_unit import GenieUnitObject
-from ....entity_object.conversion.aoc.genie_unit import GenieUnitTaskGroup,\
+from ....entity_object.conversion.aoc.genie_unit import GenieUnitTaskGroup, \
     GenieVillagerGroup
 from ....entity_object.conversion.aoc.genie_unit import GenieVariantGroup
-from ....service.debug_info import debug_converter_objects,\
+from ....service.debug_info import debug_converter_objects, \
     debug_converter_object_groups
 from ....service.read.nyan_api_loader import load_api
-from ....value_object.conversion.aoc.internal_nyan_names import AMBIENT_GROUP_LOOKUPS,\
+from ....value_object.conversion.aoc.internal_nyan_names import AMBIENT_GROUP_LOOKUPS, \
     VARIANT_GROUP_LOOKUPS
 from .media_subprocessor import AoCMediaSubprocessor
 from .modpack_subprocessor import AoCModpackSubprocessor
@@ -134,6 +134,7 @@ class AoCProcessor:
         cls.extract_genie_graphics(gamespec, dataset)
         cls.extract_genie_sounds(gamespec, dataset)
         cls.extract_genie_terrains(gamespec, dataset)
+        cls.extract_genie_restrictions(gamespec, dataset)
 
         return dataset
 
@@ -478,15 +479,35 @@ class AoCProcessor:
         # call hierarchy: wrapper[0]->terrains
         raw_terrains = gamespec[0]["terrains"].value
 
-        index = 0
-        for raw_terrain in raw_terrains:
+        for index, raw_terrain in enumerate(raw_terrains):
             terrain_index = index
             terrain_members = raw_terrain.value
 
             terrain = GenieTerrainObject(terrain_index, full_data_set, members=terrain_members)
             full_data_set.genie_terrains.update({terrain.get_id(): terrain})
 
-            index += 1
+    @staticmethod
+    def extract_genie_restrictions(
+        gamespec: ArrayMember,
+        full_data_set: GenieObjectContainer
+    ) -> None:
+        """
+        Extract terrain restrictions from the game data.
+
+        :param gamespec: Gamedata from empires.dat file.
+        :type gamespec: class: ...dataformat.value_members.ArrayMember
+        """
+        # call hierarchy: wrapper[0]->terrains
+        raw_restrictions = gamespec[0]["terrain_restrictions"].value
+
+        for index, raw_restriction in enumerate(raw_restrictions):
+            restriction_index = index
+            restriction_members = raw_restriction.value
+
+            restriction = GenieTerrainRestriction(restriction_index,
+                                                  full_data_set,
+                                                  members=restriction_members)
+            full_data_set.genie_terrain_restrictions.update({restriction.get_id(): restriction})
 
     @staticmethod
     def create_unit_lines(full_data_set: GenieObjectContainer) -> None:
@@ -557,8 +578,8 @@ class AoCProcessor:
                     break
 
             else:
-                raise Exception(f"Unit {unit_id} is not first in line, but no previous unit can "
-                                "be found in other_connections")
+                raise RuntimeError(f"Unit {unit_id} is not first in line, but no previous "
+                                   "unit can be found in other_connections")
 
             connected_ids = connection["other_connected_ids"].value
             previous_unit_id = connected_ids[connected_index].value
@@ -663,7 +684,7 @@ class AoCProcessor:
 
                 upgrade_effects = effect_bundle.get_effects(effect_type=3)
 
-                if len(upgrade_effects) < 0:
+                if len(upgrade_effects) == 0:
                     continue
 
                 # Search upgrade effects for the line_id
@@ -690,8 +711,8 @@ class AoCProcessor:
                         break
 
                 else:
-                    raise Exception(f"Building {building_id} is not first in line, but no "
-                                    "previous building could be found in other_connections")
+                    raise RuntimeError(f"Building {building_id} is not first in line, but no "
+                                       "previous building could be found in other_connections")
 
                 previous_building_id = connected_ids[connected_index].value
                 break
@@ -1340,10 +1361,10 @@ class AoCProcessor:
                         continue
 
                     trade_post_id = command["unit_id"].value
-                    break
 
-                # Notify buiding
-                full_data_set.building_lines[trade_post_id].add_trading_line(unit_line)
+                    # Notify buiding
+                    if trade_post_id in full_data_set.building_lines.keys():
+                        full_data_set.building_lines[trade_post_id].add_trading_line(unit_line)
 
     @staticmethod
     def link_repairables(full_data_set: GenieObjectContainer) -> None:

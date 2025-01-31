@@ -1,19 +1,20 @@
-# Copyright 2013-2022 the openage authors. See copying.md for legal info.
+# Copyright 2013-2024 the openage authors. See copying.md for legal info.
 
 # TODO pylint: disable=C,R,too-many-lines
 from __future__ import annotations
 import typing
 
+from functools import cache
 
 from ...genie_structure import GenieStructure
 from ....read.member_access import READ, READ_GEN, SKIP
 from ....read.read_members import EnumLookupMember, ContinueReadMember, IncludeMembers, SubdataMember
 from ....read.value_members import StorageType
-from .lookup_dicts import COMMAND_ABILITY, OWNER_TYPE, RESOURCE_HANDLING, RESOURCE_TYPES,\
-    DAMAGE_DRAW_TYPE, ARMOR_CLASS, UNIT_CLASSES, ELEVATION_MODES, FOG_VISIBILITY,\
-    TERRAIN_RESTRICTIONS, BLAST_DEFENSE_TYPES, COMBAT_LEVELS, INTERACTION_MODES,\
-    MINIMAP_MODES, UNIT_LEVELS, OBSTRUCTION_TYPES, SELECTION_EFFECTS,\
-    ATTACK_MODES, BOUNDARY_IDS, BLAST_OFFENSE_TYPES, CREATABLE_TYPES,\
+from .lookup_dicts import COMMAND_ABILITY, OWNER_TYPE, RESOURCE_HANDLING, RESOURCE_TYPES, \
+    DAMAGE_DRAW_TYPE, ARMOR_CLASS, UNIT_CLASSES, ELEVATION_MODES, FOG_VISIBILITY, \
+    TERRAIN_RESTRICTIONS, BLAST_DEFENSE_TYPES, COMBAT_LEVELS, INTERACTION_MODES, \
+    MINIMAP_MODES, UNIT_LEVELS, OBSTRUCTION_TYPES, SELECTION_EFFECTS, \
+    ATTACK_MODES, BOUNDARY_IDS, BLAST_OFFENSE_TYPES, CREATABLE_TYPES, \
     GARRISON_TYPES
 
 if typing.TYPE_CHECKING:
@@ -29,6 +30,7 @@ class UnitCommand(GenieStructure):
     """
 
     @classmethod
+    @cache
     def get_data_format_members(
         cls,
         game_version: GameVersion
@@ -99,6 +101,7 @@ class UnitCommand(GenieStructure):
 class UnitHeader(GenieStructure):
 
     @classmethod
+    @cache
     def get_data_format_members(
         cls,
         game_version: GameVersion
@@ -122,6 +125,7 @@ class UnitHeader(GenieStructure):
 class UnitLine(GenieStructure):
 
     @classmethod
+    @cache
     def get_data_format_members(
         cls,
         game_version: GameVersion
@@ -143,6 +147,7 @@ class UnitLine(GenieStructure):
 class ResourceStorage(GenieStructure):
 
     @classmethod
+    @cache
     def get_data_format_members(
         cls,
         game_version: GameVersion
@@ -166,6 +171,7 @@ class ResourceStorage(GenieStructure):
 class DamageGraphic(GenieStructure):
 
     @classmethod
+    @cache
     def get_data_format_members(
         cls,
         game_version: GameVersion
@@ -191,6 +197,7 @@ class DamageGraphic(GenieStructure):
 class HitType(GenieStructure):
 
     @classmethod
+    @cache
     def get_data_format_members(
         cls,
         game_version: GameVersion
@@ -213,6 +220,7 @@ class HitType(GenieStructure):
 class ResourceCost(GenieStructure):
 
     @classmethod
+    @cache
     def get_data_format_members(
         cls,
         game_version: GameVersion
@@ -236,6 +244,7 @@ class ResourceCost(GenieStructure):
 class BuildingAnnex(GenieStructure):
 
     @classmethod
+    @cache
     def get_data_format_members(
         cls,
         game_version: GameVersion
@@ -258,6 +267,7 @@ class UnitObject(GenieStructure):
     """
 
     @classmethod
+    @cache
     def get_data_format_members(
         cls,
         game_version: GameVersion
@@ -550,6 +560,7 @@ class TreeUnit(UnitObject):
     """
 
     @classmethod
+    @cache
     def get_data_format_members(
         cls,
         game_version: GameVersion
@@ -571,6 +582,7 @@ class AnimatedUnit(UnitObject):
     """
 
     @classmethod
+    @cache
     def get_data_format_members(
         cls,
         game_version: GameVersion
@@ -592,6 +604,7 @@ class DoppelgangerUnit(AnimatedUnit):
     """
 
     @classmethod
+    @cache
     def get_data_format_members(
         cls,
         game_version: GameVersion
@@ -613,6 +626,7 @@ class MovingUnit(DoppelgangerUnit):
     """
 
     @classmethod
+    @cache
     def get_data_format_members(
         cls,
         game_version: GameVersion
@@ -660,6 +674,7 @@ class ActionUnit(MovingUnit):
     """
 
     @classmethod
+    @cache
     def get_data_format_members(
         cls,
         game_version: GameVersion
@@ -680,7 +695,8 @@ class ActionUnit(MovingUnit):
 
         if game_version.edition.game_id == "AOE2DE":
             data_format.extend([
-                (READ_GEN, "drop_sites", StorageType.ARRAY_ID, "int16_t[3]"),
+                (READ, "drop_sites_count", StorageType.INT_MEMBER, "int16_t"),
+                (READ_GEN, "drop_sites", StorageType.ARRAY_ID, "int16_t[drop_sites_count]"),
             ])
         else:
             data_format.extend([
@@ -732,6 +748,7 @@ class ProjectileUnit(ActionUnit):
     """
 
     @classmethod
+    @cache
     def get_data_format_members(
         cls,
         game_version: GameVersion
@@ -807,6 +824,9 @@ class ProjectileUnit(ActionUnit):
             (SKIP, "reload_time_displayed", StorageType.FLOAT_MEMBER, "float"),
         ])
 
+        if game_version.edition.game_id == "AOE2DE":
+            data_format.append((READ_GEN, "blast_damage", StorageType.FLOAT_MEMBER, "float"))
+
         return data_format
 
 
@@ -817,6 +837,7 @@ class MissileUnit(ProjectileUnit):
     """
 
     @classmethod
+    @cache
     def get_data_format_members(
         cls,
         game_version: GameVersion
@@ -848,6 +869,7 @@ class LivingUnit(ProjectileUnit):
     """
 
     @classmethod
+    @cache
     def get_data_format_members(
         cls,
         game_version: GameVersion
@@ -899,7 +921,7 @@ class LivingUnit(ProjectileUnit):
             data_format.extend([
                 (SKIP, "flank_attack_modifier", StorageType.FLOAT_MEMBER, "float"),
                 (READ_GEN, "creatable_type", StorageType.ID_MEMBER, EnumLookupMember(
-                    raw_type="int8_t",
+                    raw_type="uint8_t",
                     type_name="creatable_types",
                     lookup_dict=CREATABLE_TYPES
                 )),
@@ -921,6 +943,9 @@ class LivingUnit(ProjectileUnit):
                     (READ_GEN, "charge_regen_rate", StorageType.FLOAT_MEMBER, "float"),
                     (READ_GEN, "charge_cost", StorageType.ID_MEMBER, "int16_t"),
                     (READ_GEN, "charge_type", StorageType.ID_MEMBER, "int16_t"),
+                    (READ_GEN, "min_convert_mod", StorageType.FLOAT_MEMBER, "float"),
+                    (READ_GEN, "max_convert_mod", StorageType.FLOAT_MEMBER, "float"),
+                    (READ_GEN, "convert_chance_mod", StorageType.FLOAT_MEMBER, "float"),
                 ])
 
             data_format.extend([
@@ -962,6 +987,7 @@ class BuildingUnit(LivingUnit):
     """
 
     @classmethod
+    @cache
     def get_data_format_members(
         cls,
         game_version: GameVersion

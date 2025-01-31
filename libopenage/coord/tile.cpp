@@ -1,76 +1,93 @@
-// Copyright 2016-2018 the openage authors. See copying.md for legal info.
+// Copyright 2016-2024 the openage authors. See copying.md for legal info.
 
 #include "tile.h"
 
-#include "coordmanager.h"
-#include "../terrain/terrain.h"
-
-namespace openage {
-namespace coord {
+#include "chunk.h"
+#include "phys.h"
 
 
-tile3 tile::to_tile3(const Terrain & /*terrain*/, tile_t altitude) const {
-	// TODO: once terrain elevations have been implemented,
-	//       query the terrain elevation at {ne, se}.
-	tile_t elevation = 0;
+namespace openage::coord {
 
-	return tile3{this->ne, this->se, elevation + altitude};
+phys2_delta tile_delta::to_phys2() const {
+	return phys2_delta{phys2::elem_t::from_int(this->ne),
+	                   phys2::elem_t::from_int(this->se)};
 }
 
+phys3_delta tile_delta::to_phys3(tile_t up) const {
+	return phys3_delta{phys3::elem_t::from_int(this->ne),
+	                   phys3::elem_t::from_int(this->se),
+	                   phys3::elem_t::from_int(up)};
+}
+
+tile3 tile::to_tile3(tile_t up) const {
+	return tile3{this->ne, this->se, up};
+}
 
 phys2 tile::to_phys2() const {
-	return phys2{phys3::elem_t::from_int(this->ne), phys3::elem_t::from_int(this->se)};
+	return phys2{phys3::elem_t::from_int(this->ne),
+	             phys3::elem_t::from_int(this->se)};
 }
 
-
-phys3 tile::to_phys3(const Terrain &terrain, tile_t altitude) const {
-	return this->to_tile3(terrain, altitude).to_phys3();
+phys3 tile::to_phys3(tile_t up) const {
+	return this->to_tile3(up).to_phys3();
 }
 
+phys2 tile::to_phys2_center() const {
+	return phys2{phys3::elem_t::from_int(this->ne) + 0.5,
+	             phys3::elem_t::from_int(this->se) + 0.5};
+}
+
+phys3 tile::to_phys3_center(tile_t up) const {
+	return phys3{phys3::elem_t::from_int(this->ne) + 0.5,
+	             phys3::elem_t::from_int(this->se) + 0.5,
+	             phys3::elem_t::from_int(up)};
+}
+
+chunk tile::to_chunk() const {
+	return chunk{
+		static_cast<chunk::elem_t>(util::div(this->ne, tiles_per_chunk)),
+		static_cast<chunk::elem_t>(util::div(this->se, tiles_per_chunk))};
+}
+
+tile_delta tile::get_pos_on_chunk() const {
+	return tile_delta{
+		util::mod(this->ne, tiles_per_chunk),
+		util::mod(this->se, tiles_per_chunk)};
+}
+
+tile_delta tile3_delta::to_tile() const {
+	return tile_delta{this->ne, this->se};
+}
+
+phys3_delta tile3_delta::to_phys3() const {
+	return phys3_delta{phys3::elem_t::from_int(this->ne),
+	                   phys3::elem_t::from_int(this->se),
+	                   phys3::elem_t::from_int(up)};
+}
+
+tile tile3::to_tile() const {
+	return tile{this->ne, this->se};
+}
 
 phys2 tile3::to_phys2() const {
 	return this->to_tile().to_phys2();
 }
 
-
 phys3 tile3::to_phys3() const {
-	return phys3{
-		phys3::elem_t::from_int(this->ne),
-		phys3::elem_t::from_int(this->se),
-		phys3::elem_t::from_int(this->up)
-	};
+	return phys3{phys3::elem_t::from_int(this->ne),
+	             phys3::elem_t::from_int(this->se),
+	             phys3::elem_t::from_int(this->up)};
 }
 
-
-camgame tile::to_camgame(const CoordManager &mgr,
-                         const Terrain &terrain,
-                         tile_t altitude) const {
-
-	return this->to_phys3(terrain, altitude).to_camgame(mgr);
+phys2 tile3::to_phys2_center() const {
+	return phys2{phys3::elem_t::from_int(this->ne) + 0.5,
+	             phys3::elem_t::from_int(this->se) + 0.5};
 }
 
-
-viewport tile::to_viewport(const CoordManager &mgr,
-                           const Terrain &terrain,
-                           tile_t altitude) const {
-	return this->to_camgame(mgr, terrain, altitude).to_viewport(mgr);
+phys3 tile3::to_phys3_center() const {
+	return phys3{phys3::elem_t::from_int(this->ne) + 0.5,
+	             phys3::elem_t::from_int(this->se) + 0.5,
+	             phys3::elem_t::from_int(this->up)};
 }
 
-
-chunk tile::to_chunk() const {
-	return chunk{
-		static_cast<chunk::elem_t>(util::div(this->ne, tiles_per_chunk)),
-		static_cast<chunk::elem_t>(util::div(this->se, tiles_per_chunk))
-	};
-}
-
-
-tile_delta tile::get_pos_on_chunk() const {
-	return tile_delta{
-		util::mod(this->ne, tiles_per_chunk),
-		util::mod(this->se, tiles_per_chunk)
-	};
-}
-
-
-}} // namespace openage::coord
+} // namespace openage::coord

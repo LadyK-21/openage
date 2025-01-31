@@ -29,12 +29,13 @@ Dependency list:
 
     C     gcc >=10 or clang >=10
     CRA   python >=3.9
-    C     cython >=0.25
+    C     cython >=0.29.31
     C     cmake >=3.16
       A   numpy
+      A   lz4
       A   python imaging library (PIL) -> pillow
-     RA   toml
-     RA   lz4
+     RA   setuptools (for python>=3.12 and cython<3.1)
+      A   toml
     CR    opengl >=3.3
     CR    libepoxy
     CR    libpng
@@ -43,26 +44,30 @@ Dependency list:
     CR    freetype2
     CR    fontconfig
     CR    harfbuzz
+    C   O include-what-you-use
     CR    nyan  (https://github.com/SFTtech/nyan)
     CR  O ncurses
-    C     jinja2
-    CR    sdl2
-    CR    sdl2_image
+    C     mako
     CR    opusfile
     CRA   opus
     CRA   ogg
        S  pycodestyle
     C     pygments
        S  pylint
-    CR    qt5 >=5.9 (Core, Quick, QuickControls modules)
+    CR    qt6 >=6.2 (Core, Quick, QuickControls, Multimedia modules)
+    CR    toml11
     CR  O vulkan
 
       A   An installed version of any of the following (wine is your friend).
           Other versions _might_ work:
 
+     - Age of Empires I: Rise of Rome Patch 1.0a
+     - Age of Empires I: Definitive Edition
      - Age of Empires II: The Conquerors Patch 1.0c
      - Age of Empires II: Forgotten Empires
-     - Age of Empires II HD
+     - Age of Empires II: HD (now also called: Age of Empires II (2013))
+     - Age of Empires II: Definitive Edition
+     - Star Wars: Galactic Battlegrounds: Clone Campaigns
 
 
 ### Dependency installation
@@ -74,13 +79,13 @@ described below for some of the most common ones:
 - [Ubuntu](build_instructions/ubuntu.md)
 - [Debian](build_instructions/debian.md)
 - [Fedora](build_instructions/fedora.md)
-- [openSUSE](build_instructions/opensuse_tumbleweed.md)
+- [openSUSE](build_instructions/opensuse.md)
 - [macOS](build_instructions/macos.md)
 - [Arch Linux](build_instructions/arch_linux.md)
 - [FreeBSD](build_instructions/freebsd.md)
 - [Gentoo](build_instructions/gentoo.md)
+- [Nix/NixOS](build_instructions/nix.md)
 - [Microsoft Windows](build_instructions/windows_msvc.md)
-
 
 ### nyan installation
 
@@ -145,21 +150,26 @@ Also, you don't need to `make install`, you can run `openage` within its git rep
 
 ### For packagers
 
- - Don't use `./configure`; instead, handle openage like a regular
-   `cmake` project. In doubt, have a look at `./configure`'s cmake
-   invocation.
- - Use `make install DESTDIR=/tmp/your_temporary_packaging_dir`,
-   which will then be packed/installed by your package manager.
+The reference package is [created for Gentoo](https://github.com/SFTtech/gentoo-overlay/blob/master/games-strategy/openage/).
+
+- Don't use `./configure`; instead, handle openage like a regular
+  `cmake` project. In doubt, have a look at `./configure`'s cmake
+  invocation.
+- To specify the to-be-used python version (or rather, executable),
+  pass `-DPython3_EXECUTABLE=...` or `-DPython3_ROOT_DIR=...` to `cmake`
+- Use `make install DESTDIR=/tmp/your_temporary_packaging_dir`,
+  which will then be packed/installed by your package manager.
 
 
 ### Troubleshooting
 
 - I wanna see compiler invocations
   - `make VERBOSE=1`
-- My `SDL2_Image`/`PythonInterp`/whatever is installed somewhere, but `cmake` can't find it!
+- My `Qt`/`Python`/whatever is installed somewhere, but `cmake` can't find it!
   - Run `ccmake` or `cmake-gui` in the build directory to see and change config variables.
   - You can manually tell `cmake` where to look. Try something along the lines of
-    `./configure -- -DSDL2IMAGE_INCLUDE_DIRS=/whereever/sdl2_image/include/`
+    - `./configure -- -DPYTHON_INCLUDE_DIRS=/whereever/python/include/`
+    - `-DPython3_EXECUTABLE=/your/py3/directory/`
 
 - I get compiler errors about missing header files
   - Make sure to install the developer version (including header files) of the library in question.

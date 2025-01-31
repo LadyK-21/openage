@@ -1,4 +1,4 @@
-# Copyright 2020-2022 the openage authors. See copying.md for legal info.
+# Copyright 2020-2024 the openage authors. See copying.md for legal info.
 #
 # pylint: disable=too-many-locals,too-many-branches
 
@@ -63,7 +63,14 @@ class DE2TechSubprocessor:
         57: AoCUpgradeAttributeSubprocessor.kidnap_storage_upgrade,
 
         30: DE2UpgradeAttributeSubprocessor.herdable_capacity_upgrade,
+        51: DE2UpgradeAttributeSubprocessor.bfg_unknown_51_upgrade,
+        59: DE2UpgradeAttributeSubprocessor.charge_attack_upgrade,
+        60: DE2UpgradeAttributeSubprocessor.charge_regen_upgrade,
+        61: DE2UpgradeAttributeSubprocessor.charge_event_upgrade,
+        62: DE2UpgradeAttributeSubprocessor.charge_type_upgrade,
         63: AoCUpgradeAttributeSubprocessor.ignore_armor_upgrade,
+        71: DE2UpgradeAttributeSubprocessor.bfg_unknown_71_upgrade,
+        73: DE2UpgradeAttributeSubprocessor.bfg_unknown_73_upgrade,
         100: AoCUpgradeAttributeSubprocessor.resource_cost_upgrade,
         101: AoCUpgradeAttributeSubprocessor.creation_time_upgrade,
         102: AoCUpgradeAttributeSubprocessor.min_projectiles_upgrade,
@@ -75,6 +82,9 @@ class DE2TechSubprocessor:
         108: AoCUpgradeAttributeSubprocessor.garrison_heal_upgrade,
         109: DE2UpgradeAttributeSubprocessor.regeneration_rate_upgrade,
         110: DE2UpgradeAttributeSubprocessor.villager_pop_space_upgrade,
+        111: DE2UpgradeAttributeSubprocessor.min_convert_upgrade,
+        112: DE2UpgradeAttributeSubprocessor.max_convert_upgrade,
+        113: DE2UpgradeAttributeSubprocessor.convert_chance_upgrade,
     }
 
     upgrade_resource_funcs = {
@@ -85,12 +95,14 @@ class DE2TechSubprocessor:
         4: AoCUpgradeResourceSubprocessor.starting_population_space_upgrade,
         27: AoCUpgradeResourceSubprocessor.monk_conversion_upgrade,
         28: AoCUpgradeResourceSubprocessor.building_conversion_upgrade,
+        29: AoCUpgradeResourceSubprocessor.siege_conversion_upgrade,
         32: AoCUpgradeResourceSubprocessor.bonus_population_upgrade,
         35: AoCUpgradeResourceSubprocessor.faith_recharge_rate_upgrade,
         36: AoCUpgradeResourceSubprocessor.farm_food_upgrade,
         46: AoCUpgradeResourceSubprocessor.tribute_inefficiency_upgrade,
         47: AoCUpgradeResourceSubprocessor.gather_gold_efficiency_upgrade,
         50: AoCUpgradeResourceSubprocessor.reveal_ally_upgrade,
+        69: DE2UpgradeResourceSubprocessor.bfg_unknown_69_upgrade,
         77: AoCUpgradeResourceSubprocessor.conversion_resistance_upgrade,
         78: AoCUpgradeResourceSubprocessor.trade_penalty_upgrade,
         79: AoCUpgradeResourceSubprocessor.gather_stone_efficiency_upgrade,
@@ -129,6 +141,7 @@ class DE2TechSubprocessor:
         214: DE2UpgradeResourceSubprocessor.free_kipchaks_upgrade,
         216: DE2UpgradeResourceSubprocessor.sheep_food_amount_upgrade,
         218: DE2UpgradeResourceSubprocessor.cuman_tc_upgrade,
+        219: DE2UpgradeResourceSubprocessor.bfg_unknown_219_upgrade,
         220: DE2UpgradeResourceSubprocessor.relic_food_production_upgrade,
         234: DE2UpgradeResourceSubprocessor.first_crusade_upgrade,
         236: DE2UpgradeResourceSubprocessor.burgundian_vineyards_upgrade,
@@ -144,6 +157,18 @@ class DE2TechSubprocessor:
         254: DE2UpgradeResourceSubprocessor.herdable_garrison_upgrade,
         262: DE2UpgradeResourceSubprocessor.bengali_conversion_resistance_upgrade,
         266: DE2UpgradeResourceSubprocessor.doi_paper_money_upgrade,
+        267: DE2UpgradeResourceSubprocessor.forager_wood_gather_upgrade,
+        268: DE2UpgradeResourceSubprocessor.resource_decay_upgrade,
+        269: DE2UpgradeResourceSubprocessor.tech_reward_upgrade,
+        272: DE2UpgradeResourceSubprocessor.cliff_defense_upgrade,
+        273: DE2UpgradeResourceSubprocessor.elevation_defense_upgrade,
+        274: DE2UpgradeResourceSubprocessor.chieftains_upgrade,
+        280: DE2UpgradeResourceSubprocessor.conversion_range_upgrade,
+        282: DE2UpgradeResourceSubprocessor.unknown_recharge_rate_upgrade,
+        502: DE2UpgradeResourceSubprocessor.bfg_unknown_502_upgrade,
+        507: DE2UpgradeResourceSubprocessor.bfg_unknown_507_upgrade,
+        521: DE2UpgradeResourceSubprocessor.bfg_unknown_521_upgrade,
+        551: DE2UpgradeResourceSubprocessor.bfg_unknown_551_upgrade,
     }
 
     @classmethod
@@ -240,7 +265,7 @@ class DE2TechSubprocessor:
             operator = MemberOperator.MULTIPLY
 
         else:
-            raise Exception(f"Effect type {effect_type} is not a valid attribute effect")
+            raise TypeError(f"Effect type {effect_type} is not a valid attribute effect")
 
         unit_id = effect["attr_a"].value
         class_id = effect["attr_b"].value
@@ -310,7 +335,7 @@ class DE2TechSubprocessor:
             operator = MemberOperator.MULTIPLY
 
         else:
-            raise Exception(f"Effect type {effect_type} is not a valid attribute effect")
+            raise TypeError(f"Effect type {effect_type} is not a valid attribute effect")
 
         resource_id = effect["attr_a"].value
         value = effect["attr_d"].value
